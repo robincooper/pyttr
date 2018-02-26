@@ -1,6 +1,6 @@
 from collections import deque
 #from types import MethodType
-from utils import gensym, some_condition, forall, forsome, substitute, show, showall, ttracing
+from utils import gensym, some_condition, forall, forsome, substitute, show, to_latex, showall, ttracing
 from records import Rec
 
 
@@ -28,6 +28,8 @@ class Type:
             old.witness_conditions.extend([x for x in self.witness_conditions if x not in old.witness_conditions])
         return poss.model[self.show()]
     def show(self):
+        return self.name
+    def to_latex(self):
         return self.name
     def learn_witness_condition(self, c):
         self.witness_conditions.append(c) 
@@ -114,7 +116,7 @@ class BType(Type):
         self.witness_cache = []
         self.supertype_cache = []
         self.witness_conditions = []
-
+    
 class PType(Type):
     def __init__(self,pred,args): 
         self.comps = Rec({'pred':pred, 'args':args})
@@ -123,6 +125,8 @@ class PType(Type):
         self.witness_conditions = []
     def show(self):
         return self.comps.pred.name+'('+', '.join([show(x) for x in self.comps.args])+')'
+    def to_latex(self):
+        return self.comps.pred.name.replace('_','\\_')+'('+', '.join([to_latex(x) for x in self.comps.args])+')'
     def validate(self):
         if isinstance(self.comps.pred,Pred) \
                 and len(self.comps.args) == len(self.comps.pred.arity):
@@ -165,6 +169,8 @@ class MeetType(Type):
                                        and self.comps.right.query(a)]
     def show(self):
         return '('+ self.comps.left.show()+'&'+self.comps.right.show()+')'
+    def to_latex(self):
+        return '\\left(\\begin{array}{rcl}\n'+ self.comps.left.to_latex()+'\land'+self.comps.right.to_latex()+'\n\\end{array}\\right)'
     def learn_witness_condition(self,c):
         if ttracing('learn_witness_condition'):
             print('Meet types are logical and cannot learn new conditions')
@@ -207,6 +213,8 @@ class JoinType(Type):
                                        lambda a: self.comps.right.query(a)]
     def show(self):
         return '('+ self.comps.left.show()+'v'+self.comps.right.show()+')'
+    def to_latex(self):
+        return '\\left(\\begin{array}{rcl}\n'+ self.comps.left.to_latex()+'v'+self.comps.right.to_latex()+'\n\\end{array}\\right)'
     def learn_witness_condition(self,c):
         print('Join types are logical and cannot learn new conditions')
     def validate(self):
@@ -245,6 +253,9 @@ class FunType(Type):
                                         and self.comps.range.query(f.app(self.comps.domain.create_hypobj()))]
     def show(self):
         return '('+ self.comps.domain.show() + '->' + self.comps.range.show()+')'
+    def to_latex(self):
+        return '\\left(\\begin{array}{rcl}\n'+ self.comps.domain.to_latex() + '->' + self.comps.range.to_latex()+'\n\\end{array}\\right))'
+    
     def learn_witness_condition(self,c):
         print('Function types are logical and cannot learn new conditions')
     def validate(self):
@@ -267,6 +278,8 @@ class ListType(Type):
         self.witness_conditions = [lambda l: isinstance(l,list) and forall(l, lambda x: T.query(x))]
     def show(self):
         return '['+ show(self.comps.base_type)+']'
+    def to_latex(self):
+        return '\\left[\\begin{array}{rcl}\n'+ to_latex(self.comps.base_type)+'\n\\end{array}\\right]'
     def learn_witness_condition(self,c):
         print('Function types are logical and cannot learn new conditions')
     def validate(self):
@@ -288,6 +301,8 @@ class SingletonType(Type):
                                              and show(x) == show(a.eval()) and T.query(x)]
     def show(self):
         return show(self.comps.base_type)+'_'+ show(self.comps.obj)
+    def to_latex(self):
+        return to_latex(self.comps.base_type)+'_{'+ to_latex(self.comps.obj)+'}'
     def learn_witness_condition(self,c):
         print('Function types are logical and cannot learn new conditions')
     def validate(self):
@@ -336,6 +351,21 @@ class RecType(Type):
             else:
                 s = s + show(kvp[1]) 
         return "{"+s+"}"
+    
+    def to_latex(self):
+        s = ""
+        for kvp in self.comps.__dict__.items():           
+            if s == "":
+                s = s + kvp[0] + " &:& "
+            else:
+                s = s + "\\\\\n"+kvp[0] + " &:& "
+            
+            if(isinstance(kvp[1], RecType)):
+                 s = s + kvp[1].to_latex()                
+            else:
+                s = s + to_latex(kvp[1]) 
+        return "\\left\\{\\begin{array}{rcl}\n"+s+"\n\\end{array}\\right\\}"
+
     def validate(self):
         if forall(list(self.comps.__dict__.items()),lambda x: CheckField(x,self)) and not self.create_hypobj() == None:
             return True
@@ -597,8 +627,8 @@ def ProcessDepFields(depfields,res,rtype,mode='real'):
             return None
                                 
 class TTRStringType(Type):
-    def __init__(self,list):
-        self.comps = Rec({'types' : list})
+    def __init__(self,list_of_types):
+        self.comps = Rec({'types' : list_of_types})
         self.witness_cache = []
         self.supertype_cache = []
         self.witness_conditions = \
@@ -612,6 +642,9 @@ class TTRStringType(Type):
         return self
     def show(self):
         return '^'.join([show(i) for i in self.comps.types])
+    def to_latex(self):
+        # TODO
+        return '⁀'.join([to_latex(i) for i in self.comps.types])
     def validate(self):
         return forall(self.comps.types, lambda T: isinstance(T,Type))
     def learn_witness_condition(self,c):
@@ -659,6 +692,9 @@ class KPlusStringType(Type):
         self.poss = ''
     def show(self):
         return show(self.comps.base_type)+'+'
+    def to_latex(self):
+        # TODO
+        return to_latex(self.comps.base_type)+'+'
     def validate(self):
         return isinstance(self.comps.base_type, Type)
     def learn_witness_condition(self,c):
@@ -737,6 +773,8 @@ class Pred:
         self.arity = arity
     def show(self):
         return self.name
+    def to_latex(self):
+        return self.name.replace('_', '\\_')
         
 class Fun(object):
     def __init__(self,v,dom,body):
@@ -745,6 +783,8 @@ class Fun(object):
         self.__setattr__('body',body)
     def show(self):
         return 'lambda ' + self.var + ':' + self.domain_type.show() + ' . ' + show(self.body)
+    def to_latex(self):
+        return '\\lambda ' + self.var + ':' + self.domain_type.to_latex() + ' . ' + to_latex(self.body)
     def validate(self):
         if isinstance(self.var,str) and isinstance(self.domain_type,Type):
             return True
@@ -801,7 +841,7 @@ def merge_dep_types(f1,f2):
         if ttracing('merge_dep_types'):
             print(show(f1)+' and '+show(f2)+' cannot be merged.')
         return None
- 
+
 
 def combine_dep_types(f1,f2):
     if isinstance(f1,Type) and isinstance(f2,Type):
@@ -846,6 +886,8 @@ class HypObj(object):
         return forall(self.types,lambda x: isinstance(x,Type))
     def show(self):
         return self.name
+    def to_latex(self):
+        return self.name
 
 class LazyObj(object):
     def __init__(self,strlist):
@@ -885,6 +927,8 @@ class LazyObj(object):
             return None
     def show(self):
         return show(self.oplist)
+    def to_latex(self):
+        return to_latex(self.oplist)
 
 class Possibility:
     def __init__(self,name='',d=None):
@@ -903,6 +947,8 @@ class AbsPath(object):
         self.path = path
     def show(self):
         return show(self.rec)+'.'+show(self.path)
+    def to_latex(self):
+        return to_latex(self.rec)+'.'+to_latex(self.path)
     def subst(self,v,a):
         return AbsPath(substitute(self.rec,v,a),substitute(self.path,v,a))
 
@@ -916,6 +962,8 @@ class TTRString(object):
             return TTRString(self.items+[s])
     def show(self):
         return '^'.join([show(i) for i in self.items])
+    def to_latex(self):
+        return '^'.join([to_latex(i) for i in self.items])
 
 #============================
 

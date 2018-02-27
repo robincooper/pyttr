@@ -67,3 +67,15 @@ history matches the activity pattern associated with the type.
 Improved the display of network histories for neural ttr (nu.ipynb) as
 defined in neurons.py.  Neurons which are not present at a time step
 are now represented with '*' (rather than '2').
+
+27th February 2018
+
+Introduced a preliminary 'show_latex' facility. (Thanks to Mehdi
+Ghanimifard.)
+
+Changed the witness condition for singleton types so that the equality
+required is not Python equality but equality of the show-string.
+
+Added notebooks (preliminary) corresponding to the old example files:
+example-records.py and example-types.py.  The new files are
+records.ipynb and types.ipynb.

@@ -1,5 +1,5 @@
 from collections import deque
-from utils import show,ttracing,substitute
+from utils import show,to_latex,ttracing,substitute
 
 class Rec(object):
     def __init__(self,d={}):
@@ -22,6 +22,21 @@ class Rec(object):
             else:
                 s = s + show(kvp[1]) 
         return "{"+s+"}"
+        
+    def to_latex(self):
+        s = ""
+        for kvp in self.__dict__.items():           
+            if s == "":
+                s = s + to_latex(kvp[0]) + " &=& "
+            else:
+                s = s + "\\\\\n"+to_latex(kvp[0]) + " &=& "
+            
+            if(isinstance(kvp[1], Rec)):
+                 s = s + kvp[1].to_latex()
+            else:
+                s = s + to_latex(kvp[1])
+                
+        return "\\left[\\begin{array}{rcl}\n"+s+"\n\\end{array}\\right]"
         
     def addfield(self, label, value):
         if label in self.__dict__.keys(): 

@@ -1,11 +1,12 @@
 from itertools import count
+from IPython.display import Latex
 
 gennum = dict()
 
 def gensym(x):
     if x not in gennum:
-       gennum[x] = count() 
-    return x+str(gennum[x].__next__())
+        gennum[x] = count() 
+    return x+'_{'+str(gennum[x].__next__())+'}'
 
 
 def some_condition(conds,obj):
@@ -40,6 +41,43 @@ def show(obj):
         return str(obj)
         
 
+def to_latex(obj):
+    if isinstance(obj,str):
+        return '\\text{'+obj+'}'
+    elif isinstance(obj,list):
+        return '[ '+ ', '.join([to_latex(x) for x in obj])+']'
+    elif isinstance(obj,tuple):
+        return '\\langle '+ ', '.join([to_latex(x) for x in obj])+'\\rangle'
+    elif isinstance(obj,dict):
+        return '\\left\\{\\begin{array}{rcl}\n'+'\\\\\n'.join([to_latex(i[0])+' &=& '+to_latex(i[1]) for i in obj.items()])+'\n\\end{array}\\right\\}'
+    elif 'to_latex' in dir(obj):
+        return obj.to_latex()
+    else:
+        return str(obj)
+
+def to_ipython_latex(obj):
+    return '\\begin{equation}'+ to_latex(obj) + '\\end{equation}'
+
+def print_latex(obj):
+    return print(to_ipython_latex(obj))
+
+# ttrmacros = '\newcommand{\record}[1]{$\left[\mbox{\begin{tabular}{lcl} #1 \end{tabular}}\right]$} \n \
+# \newcommand{\smallrecord}[1]{$\left[\mbox{\begin{tabular}{@{}l@{}c@{}l@{}} #1 \n \
+# \end{tabular}}\right]$} \n \
+# \n \
+# \newcommand{\field}[2]{#1 & = & #2} \n \
+# \newcommand{\tfield}[2]{#1 & : & #2} \n \
+# \newcommand{\smalltfield}[2]{#1:#2 & &} \n \
+# \newcommand{\mfield}[3]{#1=#2 & : & #3} \n \
+# \newcommand{\smallmfield}[3]{#1=#2:#3 & &} \n \
+# \newcommand{\rfield}[3]{#1$\underline{\varepsilon}$#2 & : & #3} \n \
+# \newcommand{\smallrfield}[3]{#1$\underline{\varepsilon}$#2:#3 & &} \n \
+# \newcommand{\hfield}[2]{{\sc #1} & & #2} \n'
+
+
+def show_latex(obj):
+    return Latex(to_ipython_latex(obj))
+        
 def showall(objs):
     return [show(obj) for obj in objs]
 
@@ -57,7 +95,7 @@ def substitute(obj,v,a):
 
 def example(num):
     print('\n\nExample '+str(num)+':\n')
- 
+
 
 ######################
 

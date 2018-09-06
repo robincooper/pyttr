@@ -1,1 +1,13 @@
 \#README\#
+\#.DS_Store\#
+\#ttrtypes.py\#
+.ipynb_checkpoints/ptype_learn-checkpoint.ipynb
+__pycache__/ttrtypes.cpython-34.pyc
+__pycache__/records.cpython-34.pyc
+__pycache__/utils.cpython-34.pyc
+README.md
+looking_for_dogs.ipynb
+ronja_looking_for_dogs.ipynb
+.ipynb_checkpoints/ronja_looking_for_dogs-checkpoint.ipynb
+.ipynb_checkpoints/looking_for_dogs-checkpoint.ipynb
+.ipynb_checkpoints/looking_for_dogs-checkpoint.ipynb

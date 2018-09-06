@@ -1,3 +1,4 @@
+from copy import deepcopy
 from collections import deque
 #from types import MethodType
 from utils import gensym, some_condition, forall, forsome, substitute, show, to_latex, showall, ttracing
@@ -16,23 +17,32 @@ class Type:
         self.witness_cache = []
         self.supertype_cache = []
         self.witness_conditions = []
+        self.witness_types = []
+        self.poss = ''
     def in_poss(self,poss):
+        key = self.show()
         if poss == '':
             return self
-        elif self.show() not in poss.model:
-            poss.model[self.show()] = self
+        elif key not in poss.model:
+            poss.model[key] = deepcopy(self)
+            poss.model[key].poss = poss
         else:
-            old = poss.model[self.show()]
+            old = poss.model[key]
             old.witness_cache.extend([x for x in self.witness_cache if x not in old.witness_cache])
             old.supertype_cache.extend([x for x in self.supertype_cache if x not in old.supertype_cache])
             old.witness_conditions.extend([x for x in self.witness_conditions if x not in old.witness_conditions])
-        return poss.model[self.show()]
+            old.witness_types.extend([x for x in self.witness_types if x not in old.witness_types])
+        return poss.model[key]
     def show(self):
         return self.name
     def to_latex(self):
         return self.name
     def learn_witness_condition(self, c):
-        self.witness_conditions.append(c) 
+        if c not in self.witness_conditions:
+            self.witness_conditions.append(c)
+    def learn_witness_type(self,T):
+        if T not in self.witness_types:
+            self.witness_types.append(T)
     def validate_witness(self, a):
         if self.witness_conditions == []:
             return True
@@ -64,6 +74,9 @@ class Type:
                 return a.eval().type().subtype_of(self)
             else:
                 return self.query(a.eval())
+        elif forsome(self.witness_types, lambda T: T.in_poss(self.poss).query(a)):
+            self.witness_cache.append(a)
+            return True
         else: 
             if some_condition(self.witness_conditions,a):
                 self.witness_cache.append(a)
@@ -116,6 +129,9 @@ class BType(Type):
         self.witness_cache = []
         self.supertype_cache = []
         self.witness_conditions = []
+        self.witness_types = []
+        self.poss = ''
+
     
 class PType(Type):
     def __init__(self,pred,args): 
@@ -123,6 +139,8 @@ class PType(Type):
         self.witness_cache = []
         self.supertype_cache = []
         self.witness_conditions = []
+        self.witness_types = []
+        self.poss = ''
     def show(self):
         return self.comps.pred.name+'('+', '.join([show(x) for x in self.comps.args])+')'
     def to_latex(self):
@@ -158,6 +176,14 @@ class PType(Type):
                 newargs.append(arg)
         self.comps.args = newargs
         return self
+    def query(self,a):
+        if super().query(a):
+            return True
+        elif forsome(self.comps.pred.witness_funs, lambda f: f(self.comps.args).in_poss(self.poss).query(a)):
+            self.witness_cache.append(a)
+            return True
+        else:
+            return False
             
     
 class MeetType(Type):
@@ -165,8 +191,14 @@ class MeetType(Type):
         self.comps = Rec({'left':T1, 'right':T2})
         self.witness_cache = []
         self.supertype_cache = []
-        self.witness_conditions = [lambda a: self.comps.left.query(a) \
-                                       and self.comps.right.query(a)]
+        self.witness_conditions = [lambda a: self.comps.left.in_poss(self.poss).query(a) \
+                                       and self.comps.right.in_poss(self.poss).query(a)]
+        self.witness_types = []
+        self.poss = ''
+    def in_poss(self,poss):
+        self.poss = poss
+        return self
+        
     def show(self):
         return '('+ self.comps.left.show()+'&'+self.comps.right.show()+')'
     def to_latex(self):
@@ -174,6 +206,8 @@ class MeetType(Type):
     def learn_witness_condition(self,c):
         if ttracing('learn_witness_condition'):
             print('Meet types are logical and cannot learn new conditions')
+    def learn_witness_type(self,c):
+        logtype_t(self,c)
     def validate(self):
         if isinstance(self.comps.left, Type) \
                 and isinstance(self.comps.right, Type):
@@ -209,14 +243,21 @@ class JoinType(Type):
         self.comps = Rec({'left':T1, 'right':T2})
         self.witness_cache = []
         self.supertype_cache = []
-        self.witness_conditions = [lambda a: self.comps.left.query(a), \
-                                       lambda a: self.comps.right.query(a)]
+        self.witness_conditions = [lambda a: self.comps.left.in_poss(self.poss).query(a), \
+                                       lambda a: self.comps.right.in_poss(self.poss).query(a)]
+        self.witness_types = []
+        self.poss = ''
+    def in_poss(self,poss):
+        self.poss = poss
+        return self
     def show(self):
         return '('+ self.comps.left.show()+'v'+self.comps.right.show()+')'
     def to_latex(self):
         return '\\left(\\begin{array}{rcl}\n'+ self.comps.left.to_latex()+'v'+self.comps.right.to_latex()+'\n\\end{array}\\right)'
     def learn_witness_condition(self,c):
-        print('Join types are logical and cannot learn new conditions')
+        logtype(self,c)
+    def learn_witness_type(self,c):
+        logtype_t(self,c)
     def validate(self):
         if isinstance(self.comps.left, Type) \
                 and isinstance(self.comps.right, Type):
@@ -251,13 +292,19 @@ class FunType(Type):
         self.witness_conditions = [lambda f: isinstance(f,Fun) \
                                         and f.domain_type == self.comps.domain \
                                         and self.comps.range.query(f.app(self.comps.domain.create_hypobj()))]
+        self.witness_types = []
+        self.poss = ''
+    def in_poss(self,poss):
+        return self
     def show(self):
         return '('+ self.comps.domain.show() + '->' + self.comps.range.show()+')'
     def to_latex(self):
         return '\\left(\\begin{array}{rcl}\n'+ self.comps.domain.to_latex() + '->' + self.comps.range.to_latex()+'\n\\end{array}\\right))'
     
     def learn_witness_condition(self,c):
-        print('Function types are logical and cannot learn new conditions')
+        logtype(self,c)
+    def learn_witness_type(self,c):
+        logtype_t(self,c)
     def validate(self):
         if isinstance(self.comps.domain, Type) \
                 and isinstance(self.comps.range, Type):
@@ -275,13 +322,20 @@ class ListType(Type):
         self.comps = Rec({'base_type':T})
         self.witness_cache = []
         self.supertype_cache = []
-        self.witness_conditions = [lambda l: isinstance(l,list) and forall(l, lambda x: T.query(x))]
+        self.witness_conditions = [lambda l: isinstance(l,list) and forall(l, lambda x: T.in_poss(self.poss).query(x))]
+        self.witness_types = []
+        self.poss = ''
+    def in_poss(self,poss):
+        self.poss = poss
+        return self
     def show(self):
         return '['+ show(self.comps.base_type)+']'
     def to_latex(self):
         return '\\left[\\begin{array}{rcl}\n'+ to_latex(self.comps.base_type)+'\n\\end{array}\\right]'
     def learn_witness_condition(self,c):
-        print('Function types are logical and cannot learn new conditions')
+        logtype(self,c)
+    def learn_witness_type(self,c):
+        logtype_t(self,c)
     def validate(self):
         if isinstance(self.comps.base_type,Type):
             return True
@@ -298,13 +352,20 @@ class SingletonType(Type):
         self.supertype_cache = []
         self.witness_conditions = [lambda x: show(x) == show(a) and T.query(x),\
                                    lambda x: isinstance(a,LazyObj)\
-                                             and show(x) == show(a.eval()) and T.query(x)]
+                                             and show(x) == show(a.eval()) and T.in_poss(self.poss).query(x)]
+        self.witness_types = []
+        self.poss = ''
+    def in_poss(self,poss):
+        self.poss = poss
+        return self
     def show(self):
         return show(self.comps.base_type)+'_'+ show(self.comps.obj)
     def to_latex(self):
         return to_latex(self.comps.base_type)+'_{'+ to_latex(self.comps.obj)+'}'
     def learn_witness_condition(self,c):
-        print('Function types are logical and cannot learn new conditions')
+        logtype(self,c)
+    def learn_witness_type(self,c):
+        logtype_t(self,c)
     def validate(self):
         if isinstance(self.comps.base_type,Type):
             return True
@@ -334,6 +395,7 @@ class RecType(Type):
         self.supertype_cache = []
         self.witness_conditions = [ \
             lambda r: isinstance(r, Rec) and RecOfRecType(r,self,self.poss)]
+        self.witness_types = []
         self.poss = ''
     def in_poss(self,poss):
         self.poss = poss
@@ -403,9 +465,9 @@ class RecType(Type):
             else:
                 return self.comps.__getattribute__(addr).pathvalue(".".join(splits))
     def learn_witness_condition(self,c):
-        if ttracing('learn_witness_condition'):
-            print('Record types cannot learn new witness conditions')
-        return None
+        logtype(self,c)
+    def learn_witness_type(self,c):
+        logtype_t(self,c)
     def create(self):
         res = Rec()
         depfields = RecType()
@@ -636,6 +698,7 @@ class TTRStringType(Type):
            and len(s.items) == len(self.comps.types) \
            and forall([x for x in range(len(self.comps.types))], \
                       lambda i: self.comps.types[i].in_poss(self.poss).query(s.items[i]))]
+        self.witness_types = []
         self.poss = ''
     def in_poss(self,poss):
         self.poss = poss
@@ -648,7 +711,10 @@ class TTRStringType(Type):
     def validate(self):
         return forall(self.comps.types, lambda T: isinstance(T,Type))
     def learn_witness_condition(self,c):
-        logtype(self)
+        logtype(self,c)
+        return None
+    def learn_witness_type(self,c):
+        logtype_t(self,c)
         return None
     def create(self):
         return TTRString([T.create() for T in self.comps.types])
@@ -689,7 +755,11 @@ class KPlusStringType(Type):
            and len(s.items)>0 \
            and forall(s.items,
                       lambda a: self.comps.base_type.in_poss(self.poss).query(a))]
+        self.witness_types = []
         self.poss = ''
+    def in_poss(self,poss):
+        self.poss = poss
+        return self
     def show(self):
         return show(self.comps.base_type)+'+'
     def to_latex(self):
@@ -698,7 +768,10 @@ class KPlusStringType(Type):
     def validate(self):
         return isinstance(self.comps.base_type, Type)
     def learn_witness_condition(self,c):
-        logtype(self)
+        logtype(self,c)
+        return None
+    def learn_witness_type(self,c):
+        logtype_t(self,c)
         return None
     def create(self):
         a = gensym('_sigma')
@@ -738,10 +811,14 @@ class KPlusStringType(Type):
   
 Ty = Type('Ty') 
 Ty.witness_conditions = [lambda T : isinstance(T,Type)]
-def logtype(x): 
+def logtype(x,c): 
     if ttracing('learn_witness_condition'):
         print(show(x)+' is a logical type and cannot learn new conditions')
-Ty.learn_witness_condition = logtype
+def logtype_t(x,c): 
+    if ttracing('learn_witness_type'):
+        print(show(x)+' is a logical type and cannot learn new conditions')
+Ty.learn_witness_condition = logtype.__get__(Ty,Ty.__class__)
+Ty.learn_witness_type = logtype_t.__get__(Ty,Ty.__class__)
 def create_method_type(self):
     a = gensym('_T')
     self.judge(a)
@@ -750,7 +827,8 @@ Ty.create = create_method_type.__get__(Ty, Ty.__class__)#MethodType(create_metho
 
 Re = Type('Re')
 Re.witness_conditions = [lambda r: isinstance(r,Rec)]
-Re.learn_witness_condition = logtype
+Re.learn_witness_condition = logtype.__get__(Re,Re.__class__)
+Re.learn_witness_type = logtype_t.__get__(Re,Re.__class__)
 def create_method_rec(self):
     a = gensym('_r')
     self.judge(a)
@@ -760,7 +838,8 @@ Re.create = create_method_rec.__get__(Re, Re.__class__)#MethodType(create_method
 RecTy = Type('RecTy')
 RecTy.witness_conditions = [lambda T: isinstance(T,RecType)]
 RecTy.supertype_cache = [Ty]
-RecTy.learn_witness_condition = logtype
+RecTy.learn_witness_condition = logtype.__get__(RecTy,RecTy.__class__)
+RecTy.learn_witness_type = logtype_t.__get__(RecTy,RecTy.__class__)
 RecTy.create = create_method_type.__get__(RecTy, RecTy.__class__)#MethodType(create_method_type,RecTy,Type)
 
 #==============================================================================
@@ -771,10 +850,14 @@ class Pred:
     def __init__(self,name,arity):
         self.name = name
         self.arity = arity
+        self.witness_funs = []
     def show(self):
         return self.name
     def to_latex(self):
         return self.name.replace('_', '\\_')
+    def learn_witness_fun(self,f):
+        if f not in self.witness_funs:
+            self.witness_funs.append(f)
         
 class Fun(object):
     def __init__(self,v,dom,body):

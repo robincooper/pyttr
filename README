@@ -79,3 +79,11 @@ required is not Python equality but equality of the show-string.
 Added notebooks (preliminary) corresponding to the old example files:
 example-records.py and example-types.py.  The new files are
 records.ipynb and types.ipynb.
+
+6th September 2018
+
+Improvements to the handling of possibilities.
+
+Added a facility for adding witness conditions for ptypes which are
+associate with the predicate used to construct the ptype.  See the
+notebook 'ptype_learn.ipynb' for some examples.

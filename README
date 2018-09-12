@@ -87,3 +87,7 @@ Improvements to the handling of possibilities.
 Added a facility for adding witness conditions for ptypes which are
 associate with the predicate used to construct the ptype.  See the
 notebook 'ptype_learn.ipynb' for some examples.
+
+12th September 2018
+
+Fixed minor bugs in ttr-overview.ipynb

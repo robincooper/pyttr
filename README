@@ -96,3 +96,19 @@ Fixed minor bugs in ttr-overview.ipynb
 13th September 2018
 
 Fixed minor bug in types.ipynb
+
+
+7th October 2018
+
+Minor improvements to utils.py (substitute, show_latex)
+
+24th November 2018
+
+Improvements to lspc.ipynb using the new treatment of possibilities
+and the facility for learning witness functions for predicates (see
+6th September 2018).
+
+Improvements to the treatment of subscripts and labels in the LaTeX
+display.
+
+Adjustments to ttr-overview.ipynb.

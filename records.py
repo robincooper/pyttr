@@ -23,7 +23,7 @@ class Rec(object):
                 s = s + show(kvp[1]) 
         return "{"+s+"}"
         
-    def to_latex(self):
+    def to_latex(self,vars):
         s = ""
         for kvp in self.__dict__.items():           
             if s == "":
@@ -32,9 +32,9 @@ class Rec(object):
                 s = s + "\\\\\n"+to_latex(kvp[0]) + " &=& "
             
             if(isinstance(kvp[1], Rec)):
-                 s = s + kvp[1].to_latex()
+                 s = s + kvp[1].to_latex(vars)
             else:
-                s = s + to_latex(kvp[1])
+                s = s + to_latex(kvp[1],vars)
                 
         return "\\left[\\begin{array}{rcl}\n"+s+"\n\\end{array}\\right]"
         

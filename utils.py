@@ -1,12 +1,14 @@
 from itertools import count
 from IPython.display import Latex
+import re
 
 gennum = dict()
 
 def gensym(x):
     if x not in gennum:
         gennum[x] = count() 
-    return x+'_{'+str(gennum[x].__next__())+'}'
+    #return x+'_{'+str(gennum[x].__next__())+'}'
+    return x+str(gennum[x].__next__())
 
 
 def some_condition(conds,obj):
@@ -41,17 +43,36 @@ def show(obj):
         return str(obj)
         
 
-def to_latex(obj):
+def to_latex(obj,vars=[],italic=[]):
     if isinstance(obj,str):
-        return '\\text{'+obj+'}'
+        subscript = re.search('\d+$',obj)
+        if not subscript:
+            subscript = re.search('_\D+$',obj)
+        if subscript:
+            start = subscript.start()
+            if obj in vars:
+                return obj[:start]+'_{'+obj[start:]+'}'
+            else:
+                if italic:
+                    return '\\textit{'+obj[:start]+'}_{\\textit{'+obj[start:].replace('_','')+'}}'
+                else:
+                    return '\\text{'+obj[:start]+'}_{\\text{'+obj[start:].replace('_','')+'}}'
+        else:
+            if obj in vars:
+                return obj
+            else:
+                if italic:
+                    return '\\textit{'+obj+'}'
+                else:
+                    return '\\text{'+obj+'}'
     elif isinstance(obj,list):
-        return '[ '+ ', '.join([to_latex(x) for x in obj])+']'
+        return '[ '+ ', '.join([to_latex(x,vars) for x in obj])+']'
     elif isinstance(obj,tuple):
-        return '\\langle '+ ', '.join([to_latex(x) for x in obj])+'\\rangle'
+        return '\\langle '+ ', '.join([to_latex(x,vars) for x in obj])+'\\rangle'
     elif isinstance(obj,dict):
-        return '\\left\\{\\begin{array}{rcl}\n'+'\\\\\n'.join([to_latex(i[0])+' &=& '+to_latex(i[1]) for i in obj.items()])+'\n\\end{array}\\right\\}'
+        return '\\left\\{\\begin{array}{rcl}\n'+'\\\\\n'.join([to_latex(i[0],vars)+' &=& '+to_latex(i[1],vars) for i in obj.items()])+'\n\\end{array}\\right\\}'
     elif 'to_latex' in dir(obj):
-        return obj.to_latex()
+        return obj.to_latex(vars)
     else:
         return str(obj)
 
@@ -81,17 +102,35 @@ def show_latex(obj):
 def showall(objs):
     return [show(obj) for obj in objs]
 
+# def substitute(obj,v,a):
+#     if obj == v:
+#         return a
+#     elif isinstance(obj,list):
+#         return [substitute(x,v,a) for x in obj]
+#     elif isinstance(obj,tuple):
+#         return tuple((substitute(x,v,a) for x in obj))
+#     elif 'subst' in dir(obj):
+#         return obj.subst(v,a)
+#     else: 
+#         return obj
+
 def substitute(obj,v,a):
     if obj == v:
-        return a
+        res = a
     elif isinstance(obj,list):
-        return [substitute(x,v,a) for x in obj]
+        res = [substitute(x,v,a) for x in obj]
     elif isinstance(obj,tuple):
-        return tuple((substitute(x,v,a) for x in obj))
+        res = tuple((substitute(x,v,a) for x in obj))
     elif 'subst' in dir(obj):
-        return obj.subst(v,a)
+        res =  obj.subst(v,a)
     else: 
+        res = obj
+    if res is obj:
         return obj
+    elif show(res) == show(obj):
+        return obj
+    else:
+        return res
 
 def example(num):
     print('\n\nExample '+str(num)+':\n')

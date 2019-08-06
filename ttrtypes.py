@@ -1045,9 +1045,9 @@ class TTRString(object):
         else:
             return TTRString(self.items+[s])
     def show(self):
-        return '^'.join([show(i) for i in self.items])
+        return '"'+' '.join([show(i) for i in self.items])+'"'
     def to_latex(self,vars):
-        return '^'.join([to_latex(i,vars) for i in self.items])
+        return '\ '.join([to_latex(i,vars) for i in self.items])
 
 #============================
 

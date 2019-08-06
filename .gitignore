@@ -19,3 +19,9 @@ ronja_looking_for_dogs.ipynb
 __pycache__/neurons.cpython-34.pyc
 __pycache__/nu.cpython-34.pyc
 ttr-overview.tex
+.DS_Store
+.ipynb_checkpoints/nu-checkpoint.ipynb
+.ipynb_checkpoints/records-checkpoint.ipynb
+.ipynb_checkpoints/ttr-overview-esslli2019-checkpoint.ipynb
+__pycache__/records.cpython-37.pyc
+*.pyc

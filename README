@@ -118,4 +118,13 @@ Adjustments to ttr-overview.ipynb.
 
 Slight change to the way strings are displayed by show and show_latex.
 
-Added notebook ttr_overview_esslli2019.ipynb
+Added notebook ttr-overview-esslli2019.ipynb
+
+
+9th Nov 2019
+
+Added notebook ttr<-overview-aics2019.ipynb
+
+Corrected KPlusStringType so that witnesses of such types are concatenations of strings of their base type (rather than strings of strings of their base type).
+
+Added methods startswith and startswith_recursive to TTRString

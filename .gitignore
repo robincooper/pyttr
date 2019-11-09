@@ -25,3 +25,4 @@ ttr-overview.tex
 .ipynb_checkpoints/ttr-overview-esslli2019-checkpoint.ipynb
 __pycache__/records.cpython-37.pyc
 *.pyc
+.ipynb_checkpoints/ttr-overview-aics2019-checkpoint.ipynb

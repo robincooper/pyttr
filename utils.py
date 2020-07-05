@@ -43,7 +43,7 @@ def show(obj):
         return str(obj)
         
 
-def to_latex(obj,vars=[],italic=[]):
+def to_latex(obj,vars=[],italic=[],anglebrackets=[]):
     if isinstance(obj,str):
         subscript = re.search('\d+$',obj)
         if not subscript:
@@ -66,9 +66,12 @@ def to_latex(obj,vars=[],italic=[]):
                 else:
                     return '\\text{'+obj+'}'
     elif isinstance(obj,list):
-        return '[ '+ ', '.join([to_latex(x,vars) for x in obj])+']'
+        if anglebrackets:
+           return '\\langle '+ ', '.join([to_latex(x,vars) for x in obj])+'\\rangle'
+        else:
+           return '[ '+ ', '.join([to_latex(x,vars) for x in obj])+']'
     elif isinstance(obj,tuple):
-        return '\\langle '+ ', '.join([to_latex(x,vars) for x in obj])+'\\rangle'
+        return '\\langle '+ ', '.join([to_latex(x,vars,italic,anglebrackets) for x in obj])+'\\rangle'
     elif isinstance(obj,dict):
         return '\\left\\{\\begin{array}{rcl}\n'+'\\\\\n'.join([to_latex(i[0],vars)+' &=& '+to_latex(i[1],vars) for i in obj.items()])+'\n\\end{array}\\right\\}'
     elif 'to_latex' in dir(obj):

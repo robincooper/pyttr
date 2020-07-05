@@ -425,7 +425,7 @@ class RecType(Type):
             if(isinstance(kvp[1], RecType)):
                  s = s + kvp[1].to_latex(vars)                
             else:
-                s = s + to_latex(kvp[1],vars) 
+                s = s + to_latex(kvp[1],vars,anglebrackets="yes") 
         return "\\left[\\begin{array}{lcl}\n"+s+"\n\\end{array}\\right]"
 
     def validate(self):
@@ -761,10 +761,15 @@ class KPlusStringType(Type):
         self.poss = poss
         return self
     def show(self):
-        return show(self.comps.base_type)+'+'
+        if isinstance(self.comps.base_type, TTRStringType) and len(self.comps.base_type.comps.types)>1:
+            return '('+show(self.comps.base_type)+')+'
+        else:
+            return show(self.comps.base_type)+'+'
     def to_latex(self,vars):
-        # TODO
-        return to_latex(self.comps.base_type,vars)+'+'
+        if isinstance(self.comps.base_type, TTRStringType) and len(self.comps.base_type.comps.types)>1:
+            return '('+to_latex(self.comps.base_type)+')^+'
+        else:
+            return to_latex(self.comps.base_type)+'^+'
     def validate(self):
         return isinstance(self.comps.base_type, Type)
     def learn_witness_condition(self,c):

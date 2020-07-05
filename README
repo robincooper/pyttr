@@ -123,8 +123,20 @@ Added notebook ttr-overview-esslli2019.ipynb
 
 9th Nov 2019
 
-Added notebook ttr<-overview-aics2019.ipynb
+Added notebook ttr-overview-aics2019.ipynb
 
 Corrected KPlusStringType so that witnesses of such types are concatenations of strings of their base type (rather than strings of strings of their base type).
 
 Added methods startswith and startswith_recursive to TTRString
+
+
+5th July 2020
+
+Added notebook ttr-overview-wesslli2020.ipynb
+
+KPlusStringType.show() now adds parentheses to show the scope of the
+'+' when needed.  Similarly for the LaTeX display.
+
+In record types, path lists in dependent fields are displayed in the
+LaTeX rendering with '<...>' rather than '[...]', thus following the
+standard written notation.

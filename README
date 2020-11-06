@@ -140,3 +140,8 @@ KPlusStringType.show() now adds parentheses to show the scope of the
 In record types, path lists in dependent fields are displayed in the
 LaTeX rendering with '<...>' rather than '[...]', thus following the
 standard written notation.
+
+6th Nov 2020
+
+Notebook ttr-overview-aics2020.ipynb
+

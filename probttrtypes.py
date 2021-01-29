@@ -2,6 +2,19 @@ import ttrtypes
 
 class PConstraint:
     def __init__(self,n,m=None):
+        if n<0:
+            raise Exception(str(n)+' is less than 0.')
+        if n>1:
+            raise Exception(str(n)+' is greater than 1.')
+        if m is None:
+            pass
+        elif m<0:
+            raise Exception(str(m)+' is less than 0.')
+        elif m>1:
+            raise Exception(str(m)+' is greater than 1.')
+        elif n>m:
+            raise Exception(str(n)+' is greater than '+str(m))
+                            
         self.min = float(n)
         if m is None:
             self.max = self.min
@@ -10,25 +23,25 @@ class PConstraint:
     def show(self):
         if self.max == self.min:
             return str(self.min)
-        elif self.min == 0 and self.max == 1:
-            return 'no constraint'
-        elif self.max == 1:
+        # elif self.min == 0 and self.max == 1:
+        #     return 'no constraint'
+        elif self.min>0 and self.max == 1:
             return '>='+str(self.min)
         elif self.min == 0:
             return '<='+str(self.max)
         else:
-            return 'p such that '+str(self.min)+'<=p<='+str(self.max)
+            return '>='+str(self.min)+'&<='+str(self.max)
     def to_latex(self,vars=[]):
         if self.max == self.min:
             return str(self.min)
-        elif self.min == 0 and self.max == 1:
-            return '\mathrm{no\ constraint}'
-        elif self.max == 1:
+        # elif self.min == 0 and self.max == 1:
+        #     return '\mathrm{no\ constraint}'
+        elif self.min>0 and self.max == 1:
             return '\geq'+str(self.min)
         elif self.min == 0:
             return '\leq'+str(self.max)
         else:
-            return 'p \mathrm{\ such\ that\ }'+str(self.min)+'\leq p\leq'+str(self.max)
+            return '\geq'+str(self.min)+'\&\leq'+str(self.max)
     def match(self,p):
         return p.min<=self.min and self.max<=p.max
 

@@ -1,4 +1,69 @@
 import ttrtypes
+from ttrtypes import HypObj, LazyObj
+
+
+#----------------------------
+# Type classes
+#----------------------------
+
+class Type(ttrtypes.Type):
+    def __init__(self,name='',cs={}):
+        super().__init__(name,cs)
+        self.witness_cache = ([],[])
+    def validate_witness(self, a, p):
+        if self.witness_conditions == []:
+            return True
+        elif a in self.witness_cache[0] and isinstance(a,str):
+            return True
+        elif next((c for c in self.witness_conditions if p.match(c(a))),False):
+            return True
+        else:
+            return False
+    def judge(self, a, n=1, max=None):
+        p = PConstraint(n,max)
+        if a in self.witness_cache[0]:
+           self.witness_cache[1][self.witness_cache[0].index(a)] = p
+           return p
+        elif isinstance(a,str):
+            self.witness_cache[0].append(a)
+            self.witness_cache[1].append(p)
+            return p
+        elif self.validate_witness(a,p):
+            self.witness_cache[0].append(a)
+            self.witness_cache[1].append(p)
+            return p
+        else: return False
+    def query(self, a):
+        if a in self.witness_cache[0]:
+            return self.witness_cache[1][self.witness_cache[0].index(a)]
+        elif isinstance(a,HypObj) and show(self) in showall(a.types):
+            return PConstraint(1)
+        elif isinstance(a,HypObj) and forsome(a.types,
+                                              lambda T: show(self) in showall(T.supertype_cache)):
+            return PConstraint(1)
+        elif isinstance(a, LazyObj):
+            if isinstance(a.eval(), LazyObj):
+                return a.eval().type().subtype_of(self)
+            else:
+                return self.query(a.eval())
+        elif self.witness_types:
+            ps = map(lambda T: T.in_poss(self.poss).query(a), self.witness_types)
+            res = PMax(ps)
+            self.witness_cache[0].append(a)
+            self.witness_cache[1].append(res)
+        elif self.witness_conditions:
+            ps = map(lambda c: c(a), self.witness_conditions)
+            res = PMax(ps)
+            self.witness_cache[0].append(a)
+            self.witness_cache[1].append(res)
+            return res
+        else:
+            return PConstraint(0,1)
+
+
+#--------------------
+# Probability classes
+#--------------------
 
 class PConstraint:
     def __init__(self,n,m=None):
@@ -45,32 +110,12 @@ class PConstraint:
     def match(self,p):
         return p.min<=self.min and self.max<=p.max
 
-class Type(ttrtypes.Type):
-    def __init__(self,name='',cs={}):
-        super().__init__(name,cs)
-        self.witness_cache = ([],[])
-    def validate_witness(self, a, p):
-        if self.witness_conditions == []:
-            return True
-        elif a in self.witness_cache[0] and isinstance(a,str):
-            return True
-        elif next((c for c in self.witness_conditions if p.match(c(a))),False):
-            return True
-        else:
-            return False
-    def judge(self, a, n, max=None):
-        p = PConstraint(n,max)
-        if a in self.witness_cache[0]:
-           self.witness_cache[1][self.witness_cache[0].index(a)] = p
-           return p
-        elif isinstance(a,str):
-            self.witness_cache[0].append(a)
-            self.witness_cache[1].append(p)
-            return p
-        elif self.validate_witness(a,p):
-            self.witness_cache[0].append(a)
-            self.witness_cache[1].append(p)
-            return p
-        else: return False
         
+  
+#---------------------
+# Probability functions
+#---------------------
 
+def PMax(pmap):
+    return PConstraint(max(map(lambda p: p.min, pmap)),
+                       max(map(lambda p: p.max, pmap)))

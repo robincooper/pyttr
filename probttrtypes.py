@@ -47,12 +47,12 @@ class Type(ttrtypes.Type):
             else:
                 return self.query(a.eval())
         elif self.witness_types:
-            ps = map(lambda T: T.in_poss(self.poss).query(a), self.witness_types)
+            ps = list(map(lambda T: T.in_poss(self.poss).query(a), self.witness_types))
             res = PMax(ps)
             self.witness_cache[0].append(a)
             self.witness_cache[1].append(res)
         elif self.witness_conditions:
-            ps = map(lambda c: c(a), self.witness_conditions)
+            ps = list(map(lambda c: c(a), self.witness_conditions))
             res = PMax(ps)
             self.witness_cache[0].append(a)
             self.witness_cache[1].append(res)
@@ -116,6 +116,6 @@ class PConstraint:
 # Probability functions
 #---------------------
 
-def PMax(pmap):
-    return PConstraint(max(map(lambda p: p.min, pmap)),
-                       max(map(lambda p: p.max, pmap)))
+def PMax(plist):
+    return PConstraint(max(map(lambda p: p.min, plist)),
+                       max(map(lambda p: p.max, plist)))

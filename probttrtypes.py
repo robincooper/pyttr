@@ -33,32 +33,39 @@ class Type(ttrtypes.Type):
             self.witness_cache[1].append(p)
             return p
         else: return False
-    def query(self, a):
-        if a in self.witness_cache[0]:
-            return self.witness_cache[1][self.witness_cache[0].index(a)]
-        elif isinstance(a,HypObj) and show(self) in showall(a.types):
-            return PConstraint(1)
-        elif isinstance(a,HypObj) and forsome(a.types,
-                                              lambda T: show(self) in showall(T.supertype_cache)):
-            return PConstraint(1)
-        elif isinstance(a, LazyObj):
-            if isinstance(a.eval(), LazyObj):
-                return a.eval().type().subtype_of(self)
+    def query(self, a,c=None,net=None):
+        if c is None:
+            if a in self.witness_cache[0]:
+                return self.witness_cache[1][self.witness_cache[0].index(a)]
+            elif isinstance(a,HypObj) and show(self) in showall(a.types):
+                return PConstraint(1)
+            elif isinstance(a,HypObj) and forsome(a.types,
+                                                  lambda T: show(self) in showall(T.supertype_cache)):
+                return PConstraint(1)
+            elif isinstance(a, LazyObj):
+                if isinstance(a.eval(), LazyObj):
+                    return a.eval().type().subtype_of(self)
+                else:
+                    return self.query(a.eval())
+            elif self.witness_types:
+                ps = list(map(lambda T: T.in_poss(self.poss).query(a), self.witness_types))
+                res = PMax(ps)
+                self.witness_cache[0].append(a)
+                self.witness_cache[1].append(res)
+            elif self.witness_conditions:
+                ps = list(map(lambda c: c(a), self.witness_conditions))
+                res = PMax(ps)
+                self.witness_cache[0].append(a)
+                self.witness_cache[1].append(res)
+                return res
             else:
-                return self.query(a.eval())
-        elif self.witness_types:
-            ps = list(map(lambda T: T.in_poss(self.poss).query(a), self.witness_types))
-            res = PMax(ps)
-            self.witness_cache[0].append(a)
-            self.witness_cache[1].append(res)
-        elif self.witness_conditions:
-            ps = list(map(lambda c: c(a), self.witness_conditions))
-            res = PMax(ps)
-            self.witness_cache[0].append(a)
-            self.witness_cache[1].append(res)
-            return res
+                return PConstraint(0,1)
+        elif [T for (a,T) in c if T.subtype_of(self)]:
+            return PConstraint(1)
+        elif len(c)>1:
+          return PMax(list(map(lambda x: self.query(a,[x]),c)))
         else:
-            return PConstraint(0,1)
+          return  self.query(a) 
 
 
 #--------------------

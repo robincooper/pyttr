@@ -1,5 +1,6 @@
 import ttrtypes
-from ttrtypes import HypObj, LazyObj
+from ttrtypes import HypObj, LazyObj, equal
+from utils import show, showall, forsome
 
 
 #----------------------------
@@ -33,7 +34,7 @@ class Type(ttrtypes.Type):
             self.witness_cache[1].append(p)
             return p
         else: return False
-    def query(self, a,c=None,net=None):
+    def query(self, a,c=None,oracle=None):
         if c is None:
             if a in self.witness_cache[0]:
                 return self.witness_cache[1][self.witness_cache[0].index(a)]
@@ -62,10 +63,26 @@ class Type(ttrtypes.Type):
                 return PConstraint(0,1)
         elif [T for (a,T) in c if T.subtype_of(self)]:
             return PConstraint(1)
-        elif len(c)>1:
-          return PMax(list(map(lambda x: self.query(a,[x]),c)))
+        elif oracle:
+            res = oracle(a,c)
+            if res:
+                return res
+            else:
+                return self.query(a)
         else:
-          return  self.query(a) 
+            return self.query(a)
+    def subtype_of(self,T):
+        if T in self.supertype_cache: 
+            return True
+        elif equal(self,T):
+            return True
+        else:
+            a = self.create_hypobj()
+            if T.query(a).min == 1:
+                self.supertype_cache.append(T)
+                return True
+            else: return False
+    
 
 
 #--------------------

@@ -61,10 +61,11 @@ class Type(ttrtypes.Type):
                 return res
             else:
                 return PConstraint(0,1)
-        elif [T for (a,T) in c if T.subtype_of(self)]:
+        elif [i for i in filter(lambda x: isinstance(x,tuple),c)
+              if i[0]==a and i[1].subtype_of(self)]:
             return PConstraint(1)
         elif oracle:
-            res = oracle(a,c)
+            res = oracle(a,self,c)
             if res:
                 return res
             else:

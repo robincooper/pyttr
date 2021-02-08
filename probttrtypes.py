@@ -1,6 +1,6 @@
 import ttrtypes
-from ttrtypes import HypObj, LazyObj, equal
-from utils import show, showall, forsome
+from ttrtypes import HypObj, LazyObj, equal, Pred
+from utils import show, showall, forsome, gensym
 
 
 #----------------------------
@@ -83,7 +83,85 @@ class Type(ttrtypes.Type):
                 self.supertype_cache.append(T)
                 return True
             else: return False
-    
+
+class BType(Type):
+    def __init__(self,name=gensym('BT')):
+        ttrtypes.BType.__init__(self,name)
+        self.witness_cache = ([],[])
+
+class PType(Type):
+    def __init__(self,pred,args):
+        ttrtypes.PType.__init__(self,pred,args)
+        self.witness_cache = ([],[])
+    show = ttrtypes.PType.show
+    to_latex = ttrtypes.PType.to_latex
+    def validate(self):
+        if isinstance(self.comps.pred,Pred) \
+                and len(self.comps.args) == len(self.comps.pred.arity):
+            for i in zip(self.comps.args,self.comps.pred.arity):
+                if i[1].query(i[0]).min == 1: pass
+                else: return False
+            return True
+        else: return False
+    create = ttrtypes.PType.create
+    subst = ttrtypes.PType.subst
+    eval = ttrtypes.PType.eval
+    def query(self,a,c=None,oracle=None):
+        if c is None:
+            if a in self.witness_cache[0]:
+                return self.witness_cache[1][self.witness_cache[0].index(a)]
+            elif isinstance(a,HypObj) and show(self) in showall(a.types):
+                return PConstraint(1)
+            elif isinstance(a,HypObj) and forsome(a.types,
+                                                  lambda T: show(self) in showall(T.supertype_cache)):
+                return PConstraint(1)
+            elif isinstance(a, LazyObj):
+                if isinstance(a.eval(), LazyObj):
+                    return a.eval().type().subtype_of(self)
+                else:
+                    return self.query(a.eval())
+            elif self.witness_types:
+                ps = list(map(lambda T: T.in_poss(self.poss).query(a), self.witness_types))
+                res = PMax(ps)
+                self.witness_cache[0].append(a)
+                self.witness_cache[1].append(res)
+            elif self.witness_conditions or self.comps.pred.witness_funs:
+                ps_witconds = list(map(lambda c: c(a), self.witness_conditions))
+                ps_witfuns = list(map(lambda f: f(self.comps.args).in_poss(self.poss).query(a,c,oracle), self.comps.pred.witness_funs))
+                res = PMax(ps_witconds+ps_witfuns)
+                self.witness_cache[0].append(a)
+                self.witness_cache[1].append(res)
+                return res
+            else:
+                return PConstraint(0,1)
+        elif [i for i in filter(lambda x: isinstance(x,tuple),c)
+                  if i[0]==a and i[1].subtype_of(self)]:
+            return PConstraint(1)
+        elif oracle:
+            res = oracle(a,self,c)
+            if res:
+                return res
+            else:
+                return self.query(a)
+        else:
+            return self.query(a)
+
+        # res = super().query(a,c,oracle)
+        # if res.min=1:
+        #     return res
+        # elif self.comps.pred.witness_funs:
+        #     ps = list(map(lambda f: f(self.comps.args).in_poss(self.poss).query(a,c,oracle), self.comps.pred.witness_funs))
+        #     res1 = ps.append(res)
+        #     return PMax(res1)
+        # else:
+        #     return res
+        # if super().query(a):
+        #     return True
+        # elif forsome(self.comps.pred.witness_funs, lambda f: f(self.comps.args).in_poss(self.poss).query(a)):
+        #     self.witness_cache.append(a)
+        #     return True
+        # else:
+        #     return False
 
 
 #--------------------

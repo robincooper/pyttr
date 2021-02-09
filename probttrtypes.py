@@ -1,4 +1,5 @@
 import ttrtypes
+from copy import deepcopy
 from ttrtypes import HypObj, LazyObj, equal, Pred
 from utils import show, showall, forsome, gensym
 
@@ -11,6 +12,21 @@ class Type(ttrtypes.Type):
     def __init__(self,name='',cs={}):
         super().__init__(name,cs)
         self.witness_cache = ([],[])
+    def in_poss(self,poss):
+        key = self.show()
+        if poss == '':
+            return self
+        elif key not in poss.model:
+            poss.model[key] = deepcopy(self)
+            poss.model[key].poss = poss
+        else:
+            old = poss.model[key]
+            old.witness_cache[0].extend([x for x in self.witness_cache[0] if x not in old.witness_cache[0]])
+            old.witness_cache[1].extend([x for x in self.witness_cache[1] if x not in old.witness_cache[1]])
+            old.supertype_cache.extend([x for x in self.supertype_cache if x not in old.supertype_cache])
+            old.witness_conditions.extend([x for x in self.witness_conditions if x not in old.witness_conditions])
+            old.witness_types.extend([x for x in self.witness_types if x not in old.witness_types])
+        return poss.model[key]
     def validate_witness(self, a, p):
         if self.witness_conditions == []:
             return True
@@ -72,6 +88,11 @@ class Type(ttrtypes.Type):
                 return self.query(a)
         else:
             return self.query(a)
+    def forget(self,a):
+        if a in self.witness_cache[0]:
+            res = self.witness_cache[1].pop(self.witness_cache[0].index(a))
+            self.witness_cache[0].remove(a)
+            return res
     def subtype_of(self,T):
         if T in self.supertype_cache: 
             return True
@@ -222,3 +243,12 @@ class PConstraint:
 def PMax(plist):
     return PConstraint(max(map(lambda p: p.min, plist)),
                        max(map(lambda p: p.max, plist)))
+
+
+#------------------------------
+# Non-type classes
+#------------------------------
+
+class Possibility(ttrtypes.Possibility):
+    def show(self):
+        return '\n'+self.name + ':\n'+'_'*45 +'\n'+ '\n'.join([show(i)+': '+show(list(zip(self.model[i].witness_cache[0],self.model[i].witness_cache[1]))) for i in self.model])+'\n'+'_'*45+'\n'

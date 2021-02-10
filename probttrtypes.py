@@ -93,6 +93,9 @@ class Type(ttrtypes.Type):
             res = self.witness_cache[1].pop(self.witness_cache[0].index(a))
             self.witness_cache[0].remove(a)
             return res
+    def query_nonspec(self,c=[],oracle=None):
+        js = [(x,self) for x in self.witness_cache[0] if self.witness_cache[1][self.witness_cache[0].index(x)].max>0]
+        return DisjProb(js,c,oracle)
     def subtype_of(self,T):
         if T in self.supertype_cache: 
             return True
@@ -127,8 +130,8 @@ class PType(Type):
     create = ttrtypes.PType.create
     subst = ttrtypes.PType.subst
     eval = ttrtypes.PType.eval
-    def query(self,a,c=None,oracle=None):
-        if c is None:
+    def query(self,a,c=[],oracle=None):
+        if not c:
             if a in self.witness_cache[0]:
                 return self.witness_cache[1][self.witness_cache[0].index(a)]
             elif isinstance(a,HypObj) and show(self) in showall(a.types):
@@ -166,23 +169,11 @@ class PType(Type):
                 return self.query(a)
         else:
             return self.query(a)
+    
 
-        # res = super().query(a,c,oracle)
-        # if res.min=1:
-        #     return res
-        # elif self.comps.pred.witness_funs:
-        #     ps = list(map(lambda f: f(self.comps.args).in_poss(self.poss).query(a,c,oracle), self.comps.pred.witness_funs))
-        #     res1 = ps.append(res)
-        #     return PMax(res1)
-        # else:
-        #     return res
-        # if super().query(a):
-        #     return True
-        # elif forsome(self.comps.pred.witness_funs, lambda f: f(self.comps.args).in_poss(self.poss).query(a)):
-        #     self.witness_cache.append(a)
-        #     return True
-        # else:
-        #     return False
+        #filter(lambda x: x[1].max>0,zip(self.witness_cache[0],self.witness_cache[1]))
+
+       
 
 
 #--------------------
@@ -191,24 +182,34 @@ class PType(Type):
 
 class PConstraint:
     def __init__(self,n,m=None):
-        if n<0:
-            raise Exception(str(n)+' is less than 0.')
-        if n>1:
-            raise Exception(str(n)+' is greater than 1.')
-        if m is None:
-            pass
-        elif m<0:
-            raise Exception(str(m)+' is less than 0.')
-        elif m>1:
-            raise Exception(str(m)+' is greater than 1.')
-        elif n>m:
-            raise Exception(str(n)+' is greater than '+str(m))
+        
                             
         self.min = float(n)
         if m is None:
             self.max = self.min
         else:
-            self.max = m
+            self.max = float(m)
+    def validate(self):
+        n = self.min
+        m = self.max
+        if n<0:
+            print(str(n)+' is less than 0.')
+            return False
+        elif n>1:
+            print(str(n)+' is greater than 1.')
+            return False
+        elif m:
+            if m<0:
+                print(str(m)+' is less than 0.')
+                return False
+            elif m>1:
+                print(str(m)+' is greater than 1.')
+                return False
+            elif n>m:
+                print(str(n)+' is greater than '+str(m))
+                return False
+        else:
+            return True
     def show(self):
         if self.max == self.min:
             return str(self.min)
@@ -243,6 +244,32 @@ class PConstraint:
 def PMax(plist):
     return PConstraint(max(map(lambda p: p.min, plist)),
                        max(map(lambda p: p.max, plist)))
+def PTimes(p1,p2):
+    return PConstraint(p1.min*p2.min,p1.max*p2.max)
+def PMinus(p1,p2):
+    return PConstraint(p1.min-p2.min,p1.max-p2.max)
+def PPlus(p1,p2):
+    return PConstraint(p1.min+p2.min,p1.max+p2.max)
+def ConjProb(jlist,c=[],oracle=None):
+    if len(jlist) == 0:
+        return PConstraint(1)
+    elif len(jlist) == 1:
+        return jlist[0][1].query(jlist[0][0],c,oracle)
+    else:
+        j = jlist.pop()
+        return PTimes(j[1].query(j[0],jlist+c,oracle),
+                      ConjProb(jlist,c,oracle))
+def DisjProb(jlist,c=[],oracle=None):
+    if len(jlist) == 0:
+        return PConstraint(0)
+    elif len(jlist) == 1:
+        return jlist[0][1].query(jlist[0][0],c,oracle)
+    else:
+        j = jlist.pop()
+        return PMinus(PPlus(j[1].query(j[0]),DisjProb(jlist,c,oracle)),PTimes(j[1].query(j[0],jlist+c,oracle),
+                      ConjProb(jlist,c,oracle)))
+        
+        
 
 
 #------------------------------

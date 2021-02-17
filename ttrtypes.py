@@ -75,11 +75,13 @@ class Type:
             else:
                 return self.query(a.eval())
         elif forsome(self.witness_types, lambda T: T.in_poss(self.poss).query(a)):
-            self.witness_cache.append(a)
+            if not isinstance(a,HypObj):
+                self.witness_cache.append(a)
             return True
         else: 
             if some_condition(self.witness_conditions,a):
-                self.witness_cache.append(a)
+                if not isinstance(a,HypObj):
+                    self.witness_cache.append(a)
                 return True
             else:
                 return False
@@ -180,7 +182,8 @@ class PType(Type):
         if super().query(a):
             return True
         elif forsome(self.comps.pred.witness_funs, lambda f: f(self.comps.args).in_poss(self.poss).query(a)):
-            self.witness_cache.append(a)
+            if not isinstance(a, HypObj):
+                self.witness_cache.append(a)
             return True
         else:
             return False

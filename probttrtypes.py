@@ -50,8 +50,8 @@ class Type(ttrtypes.Type):
             self.witness_cache[1].append(p)
             return p
         else: return False
-    def query(self, a,c=None,oracle=None):
-        if c is None:
+    def query(self, a,c=[],oracle=None):
+        if not c:
             if a in self.witness_cache[0]:
                 return self.witness_cache[1][self.witness_cache[0].index(a)]
             elif isinstance(a,HypObj) and show(self) in showall(a.types):
@@ -67,13 +67,16 @@ class Type(ttrtypes.Type):
             elif self.witness_types:
                 ps = list(map(lambda T: T.in_poss(self.poss).query(a), self.witness_types))
                 res = PMax(ps)
-                self.witness_cache[0].append(a)
-                self.witness_cache[1].append(res)
+                if not isinstance(a,HypObj):
+                    self.witness_cache[0].append(a)
+                    self.witness_cache[1].append(res)
+                return res
             elif self.witness_conditions:
                 ps = list(map(lambda c: c(a), self.witness_conditions))
                 res = PMax(ps)
-                self.witness_cache[0].append(a)
-                self.witness_cache[1].append(res)
+                if not isinstance(a,HypObj):
+                    self.witness_cache[0].append(a)
+                    self.witness_cache[1].append(res)
                 return res
             else:
                 return PConstraint(0,1)
@@ -95,7 +98,18 @@ class Type(ttrtypes.Type):
             return res
     def query_nonspec(self,c=[],oracle=None):
         js = [(x,self) for x in self.witness_cache[0] if self.witness_cache[1][self.witness_cache[0].index(x)].max>0]
-        return DisjProb(js,c,oracle)
+        if not c:
+            return DisjProb(js,c,oracle)
+        elif [i for i in filter(lambda x: isinstance(x,tuple),c)
+              if i[1].subtype_of(self)]:
+            return PConstraint(1)
+        elif [i for i in filter(lambda x: isinstance(x,Type),c)
+              if i.subtype_of(self)]:
+            return PConstraint(1)
+        elif oracle:
+            return DisjProb(js,c,oracle)
+        else:
+            return DisjProb(js)
     def subtype_of(self,T):
         if T in self.supertype_cache: 
             return True
@@ -147,14 +161,16 @@ class PType(Type):
             elif self.witness_types:
                 ps = list(map(lambda T: T.in_poss(self.poss).query(a), self.witness_types))
                 res = PMax(ps)
-                self.witness_cache[0].append(a)
-                self.witness_cache[1].append(res)
+                if not isinstance(a,HypObj):
+                    self.witness_cache[0].append(a)
+                    self.witness_cache[1].append(res)
             elif self.witness_conditions or self.comps.pred.witness_funs:
                 ps_witconds = list(map(lambda c: c(a), self.witness_conditions))
                 ps_witfuns = list(map(lambda f: f(self.comps.args).in_poss(self.poss).query(a,c,oracle), self.comps.pred.witness_funs))
                 res = PMax(ps_witconds+ps_witfuns)
-                self.witness_cache[0].append(a)
-                self.witness_cache[1].append(res)
+                if not isinstance(a,HypObj):
+                    self.witness_cache[0].append(a)
+                    self.witness_cache[1].append(res)
                 return res
             else:
                 return PConstraint(0,1)

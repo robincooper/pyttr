@@ -17,6 +17,7 @@ class Type:
         self.witness_cache = []
         self.supertype_cache = []
         self.witness_conditions = []
+        self.witconds_in_progress = []
         self.witness_types = []
         self.poss = ''
     def in_poss(self,poss):
@@ -79,7 +80,7 @@ class Type:
                 self.witness_cache.append(a)
             return True
         else: 
-            if some_condition(self.witness_conditions,a):
+            if some_condition(self.witness_conditions,a,self.witconds_in_progress):
                 if not isinstance(a,HypObj):
                     self.witness_cache.append(a)
                 return True

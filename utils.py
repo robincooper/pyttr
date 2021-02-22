@@ -1,6 +1,7 @@
 from itertools import count
 from IPython.display import Latex
 import re
+import inspect
 
 gennum = dict()
 
@@ -10,11 +11,28 @@ def gensym(x):
     #return x+'_{'+str(gennum[x].__next__())+'}'
     return x+str(gennum[x].__next__())
 
+def some_condition(conds,obj,L):
+    res = some_condition1(conds,obj,L)
+    if 'loop_found' in L:
+        res = False
+    if len(list(filter(lambda x: x is 'query',[x[3] for x in inspect.stack()])))==1:
+        L.clear()
+    return res
+    
+    
 
-def some_condition(conds,obj):
-    if len(conds) == 0: return False
-    elif conds[0](obj) == True: return True
-    else: return some_condition(conds[1:],obj)
+def some_condition1(conds,obj,L):
+    if len(conds) == 0:
+        return False
+    elif (conds[0],obj) in L:
+        L.append('loop_found')
+        return False
+    else:
+        L.append((conds[0],obj))
+        if conds[0](obj) == True:
+            return True
+        else:
+            return some_condition1(conds[1:],obj,L)
 
 def forall(list,cond):
     if list == []: return True

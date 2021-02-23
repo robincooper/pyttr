@@ -1,7 +1,7 @@
 from copy import deepcopy
 from collections import deque
 #from types import MethodType
-from utils import gensym, some_condition, forall, forsome, substitute, show, to_latex, showall, ttracing
+from utils import gensym, some_condition, forall, forsome, substitute, show, to_latex, showall, ttracing, check_stack
 from records import Rec
 
 
@@ -17,7 +17,6 @@ class Type:
         self.witness_cache = []
         self.supertype_cache = []
         self.witness_conditions = []
-        self.witconds_in_progress = []
         self.witness_types = []
         self.poss = ''
     def in_poss(self,poss):
@@ -64,7 +63,9 @@ class Type:
             self.create()
         return True
     def query(self, a):
-        if a in self.witness_cache: return True
+        if check_stack('query', [a]):
+             return '*'
+        elif a in self.witness_cache: return True
         elif isinstance(a,HypObj) and show(self) in showall(a.types):
             return True
         elif isinstance(a,HypObj) and forsome(a.types,
@@ -80,7 +81,7 @@ class Type:
                 self.witness_cache.append(a)
             return True
         else: 
-            if some_condition(self.witness_conditions,a,self.witconds_in_progress):
+            if some_condition(self.witness_conditions,a):
                 if not isinstance(a,HypObj):
                     self.witness_cache.append(a)
                 return True

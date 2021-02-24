@@ -63,7 +63,7 @@ class Type:
             self.create()
         return True
     def query(self, a):
-        if check_stack('query', [a]):
+        if check_stack('query', [a,self]):
              return '*'
         elif a in self.witness_cache: return True
         elif isinstance(a,HypObj) and show(self) in showall(a.types):
@@ -181,7 +181,30 @@ class PType(Type):
         self.comps.args = newargs
         return self
     def query(self,a):
-        if super().query(a):
+        # print('super',super().query(a))
+        # if super().query(a):
+        #     print('super',super().query(a))
+        #     return True
+        if check_stack('query', [a,self]):
+             return '*'
+        elif a in self.witness_cache: return True
+        elif isinstance(a,HypObj) and show(self) in showall(a.types):
+            return True
+        elif isinstance(a,HypObj) and forsome(a.types,
+                                              lambda T: show(self) in showall(T.supertype_cache)):
+            return True
+        elif isinstance(a, LazyObj):
+            if isinstance(a.eval(), LazyObj):
+                return a.eval().type().subtype_of(self)
+            else:
+                return self.query(a.eval())
+        elif forsome(self.witness_types, lambda T: T.in_poss(self.poss).query(a)):
+            if not isinstance(a,HypObj):
+                self.witness_cache.append(a)
+            return True
+        elif some_condition(self.witness_conditions,a):
+            if not isinstance(a,HypObj):
+                self.witness_cache.append(a)
             return True
         elif forsome(self.comps.pred.witness_funs, lambda f: f(self.comps.args).in_poss(self.poss).query(a)):
             if not isinstance(a, HypObj):

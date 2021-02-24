@@ -26,7 +26,7 @@ def some_condition(conds,obj):
         return False
     else:
         if conds[0](obj) == True:
-            return True
+             return True
         else:
             return some_condition(conds[1:],obj)
 

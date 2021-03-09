@@ -149,3 +149,11 @@ Notebook ttr-overview-aics2020.ipynb
 17 February 2021
 
 Corrected a bug in the querying of hypothetical objects.
+
+
+9 March 2021
+
+Improved the handling of non-well founded witness conditions.  See the
+notebook NWFwitconds.ipynb
+
+Corrected some bugs relating to string types.

@@ -838,8 +838,8 @@ class TTRStringType(TypeClass):
 
          
 class KPlusStringType(TypeClass):
-    def __init__(self,T):
-        self.comps = Rec({'base_type' : T})
+    def __init__(self,strT):
+        self.comps = Rec({'base_type' : strT})
         self.witness_cache = []
         self.supertype_cache = []
         self.witness_conditions = \
@@ -1133,12 +1133,19 @@ class TTRString(object):
         else:
             return TTRString(self.items+[s])
     def startswith(self,T):
-        for i in range(len(self.items)):
-            if T.query(TTRString(self.items[0:i+1])):
-                return(TTRString(self.items[i+1:]))
-            else:
-                pass
-        return(False)
+        firstT = next(filter(lambda x: T.query(x),[TTRString(self.items[0:i+1]) for i in range(len(self.items))]),None)
+        if firstT:
+            return TTRString(self.items[len(firstT.items):])
+        else:
+            return False
+                             
+            
+        # for i in range(len(self.items)):
+        #     if T.query(TTRString(self.items[0:i+1])):
+        #         return(TTRString(self.items[i+1:]))
+        #     else:
+        #         pass
+        # return(False)
     def startswith_recursive(self,T):
         res = self.startswith(T)
         if res is False:

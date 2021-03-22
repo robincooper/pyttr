@@ -1,15 +1,50 @@
 from copy import deepcopy
 from collections import deque
 #from types import MethodType
-from utils import gensym, some_condition, forall, forsome, substitute, show, to_latex, showall, ttracing
+from utils import gensym, some_condition, forall, forsome, substitute, show, to_latex, showall, ttracing, check_stack
 from records import Rec
+
+#==============================================================================
+# Possibilities
+#==============================================================================
+
+class Possibility:
+    def __init__(self,name='',d=None):
+        self.name = name
+        if self.name == '': self.name = gensym('M')
+        if d is None:
+            self.model={}
+        else:
+            self.model = d
+    def show(self):
+        return '\n'+self.name + ':\n'+'_'*45 +'\n'+ '\n'.join([show(i)+': '+show(self.model[i].witness_cache) for i in self.model if i not in ['Ty','Re','RecTy']])+'\n'+'_'*45+'\n'
+
+_M = Possibility('_Model_')
+
+def showmodel(m=_M):
+    return show(m)
+
+def initmodel():
+    global _M
+    _M.model = {}
+
+def add_to_model(T,m=_M):
+    key = T.show()
+    if key in m.model:
+        return m.model[key]
+    else:
+        m.model[key] = T
+        T.poss = m
+        return T
+
+
 
 
 #==============================================================================
 # Type classes
 #==============================================================================
 
-class Type:
+class TypeClass:
     def __init__(self,name='',cs={}):
         self.name = name
         if self.name == '': self.name = gensym('T')
@@ -63,7 +98,9 @@ class Type:
             self.create()
         return True
     def query(self, a):
-        if a in self.witness_cache: return True
+        if check_stack('query', dict(a=a,self=self)):
+             return '*'
+        elif a in self.witness_cache: return True
         elif isinstance(a,HypObj) and show(self) in showall(a.types):
             return True
         elif isinstance(a,HypObj) and forsome(a.types,
@@ -124,7 +161,14 @@ class Type:
         else:
             return T
 
-class BType(Type):
+
+
+def Type(name='',cs={},poss=_M):
+    T = TypeClass(name,cs)
+    return add_to_model(T,poss)
+    
+
+class BTypeClass(TypeClass):
     def __init__(self,name=gensym('BT')):
         self.name=name
         self.comps = Rec({})
@@ -134,8 +178,12 @@ class BType(Type):
         self.witness_types = []
         self.poss = ''
 
+def BType(name=gensym('BT'),poss=_M):
+    T = BTypeClass(name)
+    return add_to_model(T,poss)
+
     
-class PType(Type):
+class PTypeClass(TypeClass):
     def __init__(self,pred,args): 
         self.comps = Rec({'pred':pred, 'args':args})
         self.witness_cache = []
@@ -179,17 +227,48 @@ class PType(Type):
         self.comps.args = newargs
         return self
     def query(self,a):
-        if super().query(a):
+        # print('super',super().query(a))
+        # if super().query(a):
+        #     print('super',super().query(a))
+        #     return True
+        if check_stack('query', dict(a=a,self=self)):
+             return '*'
+        elif a in self.witness_cache: return True
+        elif isinstance(a,HypObj) and show(self) in showall(a.types):
             return True
+        elif isinstance(a,HypObj) and forsome(a.types,
+                                              lambda T: show(self) in showall(T.supertype_cache)):
+            return True
+        elif isinstance(a, LazyObj):
+            if isinstance(a.eval(), LazyObj):
+                return a.eval().type().subtype_of(self)
+            else:
+                return self.query(a.eval())
+        elif forsome(self.witness_types, lambda T: T.in_poss(self.poss).query(a)):
+            if not isinstance(a,HypObj):
+                self.witness_cache.append(a)
+            return True
+        elif some_condition(self.witness_conditions,a):
+            if not isinstance(a,HypObj):
+                self.witness_cache.append(a)
+            return True
+        # elif self.poss == '' and forsome(self.comps.pred.witness_funs, lambda f: f(self.comps.args).query(a)):
+        #     if not isinstance(a, HypObj):
+        #         self.witness_cache.append(a)
+        #     return True
         elif forsome(self.comps.pred.witness_funs, lambda f: f(self.comps.args).in_poss(self.poss).query(a)):
             if not isinstance(a, HypObj):
                 self.witness_cache.append(a)
             return True
         else:
             return False
+
+def PType(pred,args,poss=_M):
+    T = PTypeClass(pred,args)
+    return add_to_model(T,poss)
             
     
-class MeetType(Type):
+class MeetType(TypeClass):
     def __init__(self,T1,T2): 
         self.comps = Rec({'left':T1, 'right':T2})
         self.witness_cache = []
@@ -197,7 +276,7 @@ class MeetType(Type):
         self.witness_conditions = [lambda a: self.comps.left.in_poss(self.poss).query(a) \
                                        and self.comps.right.in_poss(self.poss).query(a)]
         self.witness_types = []
-        self.poss = ''
+        self.poss = _M
     def in_poss(self,poss):
         self.poss = poss
         return self
@@ -212,8 +291,8 @@ class MeetType(Type):
     def learn_witness_type(self,c):
         logtype_t(self,c)
     def validate(self):
-        if isinstance(self.comps.left, Type) \
-                and isinstance(self.comps.right, Type):
+        if isinstance(self.comps.left, TypeClass) \
+                and isinstance(self.comps.right, TypeClass):
             return True
         else: return False
     def judge(self,a):
@@ -241,7 +320,9 @@ class MeetType(Type):
         else:
             return MeetType(self.comps.left.subst(v,a),self.comps.right.subst(v,a))
 
-class JoinType(Type):
+
+
+class JoinType(TypeClass):
     def __init__(self,T1,T2): 
         self.comps = Rec({'left':T1, 'right':T2})
         self.witness_cache = []
@@ -249,7 +330,7 @@ class JoinType(Type):
         self.witness_conditions = [lambda a: self.comps.left.in_poss(self.poss).query(a), \
                                        lambda a: self.comps.right.in_poss(self.poss).query(a)]
         self.witness_types = []
-        self.poss = ''
+        self.poss = _M
     def in_poss(self,poss):
         self.poss = poss
         return self
@@ -262,8 +343,8 @@ class JoinType(Type):
     def learn_witness_type(self,c):
         logtype_t(self,c)
     def validate(self):
-        if isinstance(self.comps.left, Type) \
-                and isinstance(self.comps.right, Type):
+        if isinstance(self.comps.left, TypeClass) \
+                and isinstance(self.comps.right, TypeClass):
             return True
         else: return False
     def judge(self, a):
@@ -286,8 +367,10 @@ class JoinType(Type):
             return a
         else:
             return JoinType(self.comps.left.subst(v,a),self.comps.right.subst(v,a))
+
+
         
-class FunType(Type):
+class FunType(TypeClass):
     def __init__(self,T1,T2): 
         self.comps = Rec({'domain':T1, 'range':T2})
         self.witness_cache = []
@@ -296,7 +379,7 @@ class FunType(Type):
                                         and f.domain_type == self.comps.domain \
                                         and self.comps.range.query(f.app(self.comps.domain.create_hypobj()))]
         self.witness_types = []
-        self.poss = ''
+        self.poss = _M
     def in_poss(self,poss):
         return self
     def show(self):
@@ -309,8 +392,8 @@ class FunType(Type):
     def learn_witness_type(self,c):
         logtype_t(self,c)
     def validate(self):
-        if isinstance(self.comps.domain, Type) \
-                and isinstance(self.comps.range, Type):
+        if isinstance(self.comps.domain, TypeClass) \
+                and isinstance(self.comps.range, TypeClass):
             return True
         else: return False
     # def create_hypobj(self):
@@ -320,14 +403,16 @@ class FunType(Type):
             return a
         else: return FunType(self.comps.domain.subst(v,a),self.comps.range.subst(v,a))
 
-class ListType(Type):
+
+
+class ListType(TypeClass):
     def __init__(self,T):
         self.comps = Rec({'base_type':T})
         self.witness_cache = []
         self.supertype_cache = []
         self.witness_conditions = [lambda l: isinstance(l,list) and forall(l, lambda x: T.in_poss(self.poss).query(x))]
         self.witness_types = []
-        self.poss = ''
+        self.poss = _M
     def in_poss(self,poss):
         self.poss = poss
         return self
@@ -340,7 +425,7 @@ class ListType(Type):
     def learn_witness_type(self,c):
         logtype_t(self,c)
     def validate(self):
-        if isinstance(self.comps.base_type,Type):
+        if isinstance(self.comps.base_type,TypeClass):
             return True
         else: return False
     def subst(self,v,a):
@@ -348,7 +433,9 @@ class ListType(Type):
             return a
         else: return ListType(substitute(self.comps.base_type,v,a))
 
-class SingletonType(Type):
+
+
+class SingletonType(TypeClass):
     def __init__(self,T,a):
         self.comps = Rec({'base_type':T, 'obj':a})
         self.witness_cache = []
@@ -357,7 +444,7 @@ class SingletonType(Type):
                                    lambda x: isinstance(a,LazyObj)\
                                              and show(x) == show(a.eval()) and T.in_poss(self.poss).query(x)]
         self.witness_types = []
-        self.poss = ''
+        self.poss = _M 
     def in_poss(self,poss):
         self.poss = poss
         return self
@@ -370,7 +457,7 @@ class SingletonType(Type):
     def learn_witness_type(self,c):
         logtype_t(self,c)
     def validate(self):
-        if isinstance(self.comps.base_type,Type):
+        if isinstance(self.comps.base_type,TypeClass):
             return True
         else: return False
     def create(self):
@@ -386,7 +473,9 @@ class SingletonType(Type):
             return a
         else: return SingletonType(substitute(self.comps.base_type,v,a),substitute(self.comps.obj,v,a))
 
-class RecType(Type):
+
+
+class RecType(TypeClass):
     def __init__(self,d={}):
         self.comps = Rec()
         for item in d.items():
@@ -399,7 +488,7 @@ class RecType(Type):
         self.witness_conditions = [ \
             lambda r: isinstance(r, Rec) and RecOfRecType(r,self,self.poss)]
         self.witness_types = []
-        self.poss = ''
+        self.poss = _M
     def in_poss(self,poss):
         self.poss = poss
         return self
@@ -476,7 +565,7 @@ class RecType(Type):
         depfields = RecType()
         for l in self.comps.__dict__:
             T = self.comps.__getattribute__(l)
-            if isinstance(T,Type):
+            if isinstance(T,TypeClass):
                 res.addfield(l,T.in_poss(self.poss).create())
             else: depfields.addfield(l,T)
         return ProcessDepFields(depfields,res,self)
@@ -486,7 +575,7 @@ class RecType(Type):
         depfields = RecType()
         for l in self.comps.__dict__:
             T = self.comps.__getattribute__(l)
-            if isinstance(T,Type):
+            if isinstance(T,TypeClass):
                 res.addfield(l,T.create_hypobj())
             else: depfields.addfield(l,T)
         return ProcessDepFields(depfields,res,self,'hyp')
@@ -536,9 +625,9 @@ class RecType(Type):
                         f1 = T1[0]
                         f2 = T2[0]
                         res.addfield(label, (combine_dep_types(f1,f2),T1[1]+T2[1]))
-                elif isinstance(T1,tuple) and isinstance(T2,Type):
+                elif isinstance(T1,tuple) and isinstance(T2,TypeClass):
                     res.addfield(label, (combine_dep_types(T1[0],T2),T1[1]))
-                elif isinstance(T1,Type) and isinstance(T2,tuple):
+                elif isinstance(T1,TypeClass) and isinstance(T2,tuple):
                     res.addfield(label, (combine_dep_types(T1,T2[0]),T2[1]))
                 else:
                     res.addfield(label, T1.merge(T2))
@@ -570,11 +659,11 @@ class RecType(Type):
                             res.addfield(label, T2)
                     else:
                         res.addfield(label, T2)
-                elif isinstance(T1,tuple) and isinstance(T2,Type):
+                elif isinstance(T1,tuple) and isinstance(T2,TypeClass):
                     res.addfield(label, T2)
-                elif isinstance(T1,Type) and isinstance(T2,tuple):
+                elif isinstance(T1,TypeClass) and isinstance(T2,tuple):
                     res.addfield(label,T2)
-                elif isinstance(T1,Type) and isinstance(T2,Type):
+                elif isinstance(T1,TypeClass) and isinstance(T2,TypeClass):
                     if T1.subtype_of(T2):
                         res.addfield(label, T1)
                     else:
@@ -620,7 +709,7 @@ def QueryField(l,r,T,M):
     Obj = r.__getattribute__(l)
     if isinstance(Obj,HypObj):
         M = ''
-    if isinstance(TInField, Type):
+    if isinstance(TInField, TypeClass):
         return TInField.in_poss(M).query(Obj) 
     else:
         TResolved = ComputeDepType(r,TInField,M)
@@ -691,7 +780,7 @@ def ProcessDepFields(depfields,res,rtype,mode='real'):
                 print('Unresolved dependency in '+show(rtype))
             return None
                                 
-class TTRStringType(Type):
+class TTRStringType(TypeClass):
     def __init__(self,list_of_types):
         self.comps = Rec({'types' : list_of_types})
         self.witness_cache = []
@@ -702,7 +791,7 @@ class TTRStringType(Type):
            and forall([x for x in range(len(self.comps.types))], \
                       lambda i: self.comps.types[i].in_poss(self.poss).query(s.items[i]))]
         self.witness_types = []
-        self.poss = ''
+        self.poss = _M
     def in_poss(self,poss):
         self.poss = poss
         return self
@@ -712,7 +801,7 @@ class TTRStringType(Type):
         # TODO
         return '⁀'.join([to_latex(i,vars) for i in self.comps.types])
     def validate(self):
-        return forall(self.comps.types, lambda T: isinstance(T,Type))
+        return forall(self.comps.types, lambda T: isinstance(T,TypeClass))
     def learn_witness_condition(self,c):
         logtype(self,c)
         return None
@@ -748,9 +837,9 @@ class TTRStringType(Type):
             return T
 
          
-class KPlusStringType(Type):
-    def __init__(self,T):
-        self.comps = Rec({'base_type' : T})
+class KPlusStringType(TypeClass):
+    def __init__(self,strT):
+        self.comps = Rec({'base_type' : strT})
         self.witness_cache = []
         self.supertype_cache = []
         self.witness_conditions = \
@@ -759,7 +848,7 @@ class KPlusStringType(Type):
            # and forall(s.items,
            #            lambda a: self.comps.base_type.in_poss(self.poss).query(a))]
         self.witness_types = []
-        self.poss = ''
+        self.poss = _M
     def in_poss(self,poss):
         self.poss = poss
         return self
@@ -774,7 +863,7 @@ class KPlusStringType(Type):
         else:
             return to_latex(self.comps.base_type)+'^+'
     def validate(self):
-        return isinstance(self.comps.base_type, Type)
+        return isinstance(self.comps.base_type, TypeClass)
     def learn_witness_condition(self,c):
         logtype(self,c)
         return None
@@ -818,7 +907,7 @@ class KPlusStringType(Type):
 #==============================================================================
   
 Ty = Type('Ty') 
-Ty.witness_conditions = [lambda T : isinstance(T,Type)]
+Ty.witness_conditions = [lambda T : isinstance(T,TypeClass)]
 def logtype(x,c): 
     if ttracing('learn_witness_condition'):
         print(show(x)+' is a logical type and cannot learn new conditions')
@@ -878,7 +967,7 @@ class Fun(object):
         vars = vars+[self.var]
         return '\\lambda ' + to_latex(self.var,vars) + ':' + to_latex(self.domain_type,vars) + '\\ .\\ ' + to_latex(self.body,vars)
     def validate(self):
-        if isinstance(self.var,str) and isinstance(self.domain_type,Type):
+        if isinstance(self.var,str) and isinstance(self.domain_type,TypeClass):
             return True
         else: return False
     def validate_arg(self,arg):
@@ -923,7 +1012,7 @@ class Fun(object):
         return self
 
 def merge_dep_types(f1,f2):
-    if isinstance(f1,Type) and isinstance(f1,Type):
+    if isinstance(f1,TypeClass) and isinstance(f1,TypeClass):
         return f1.merge(f2)
     elif isinstance(f1,Fun) and isinstance(f2,Fun):
         var = gensym('v')
@@ -936,12 +1025,12 @@ def merge_dep_types(f1,f2):
 
 
 def combine_dep_types(f1,f2):
-    if isinstance(f1,Type) and isinstance(f2,Type):
+    if isinstance(f1,TypeClass) and isinstance(f2,TypeClass):
         return f1.merge(f2)
-    elif isinstance(f1,Fun) and isinstance(f2,Type):
+    elif isinstance(f1,Fun) and isinstance(f2,TypeClass):
         var = gensym('v')
         return Fun(var, f1.domain_type, combine_dep_types(f1.body.subst(f1.var,var),f2))
-    elif isinstance(f1,Type) and isinstance(f2,Fun):
+    elif isinstance(f1,TypeClass) and isinstance(f2,Fun):
         var = gensym('v')
         return Fun(var, f2.domain_type, combine_dep_types(f1,f2.body.subst(f2.var,var)))
     elif isinstance(f1,Fun) and isinstance(f2,Fun):
@@ -955,7 +1044,7 @@ def combine_dep_types(f1,f2):
         return None
 
 def subtype_of_dep_types(f1,f2):
-    if isinstance(f1,Type) and isinstance(f2,Type):
+    if isinstance(f1,TypeClass) and isinstance(f2,TypeClass):
         return f1.subtype_of(f2)
     elif isinstance(f1,Fun):
         f1inst = f1.app(f1.domain_type.create_hypobj())
@@ -975,7 +1064,7 @@ class HypObj(object):
         #self.depends_on = []
         self.name = gensym('h')
     def validate(self):
-        return forall(self.types,lambda x: isinstance(x,Type))
+        return forall(self.types,lambda x: isinstance(x,TypeClass))
     def show(self):
         return self.name
     def to_latex(self,vars):
@@ -1022,16 +1111,7 @@ class LazyObj(object):
     def to_latex(self,vars):
         return to_latex(self.oplist[0],vars)+to_latex(self.oplist[1],vars)+to_latex(self.oplist[2],vars)
 
-class Possibility:
-    def __init__(self,name='',d=None):
-        self.name = name
-        if self.name == '': self.name = gensym('M')
-        if d is None:
-            self.model={}
-        else:
-            self.model = d
-    def show(self):
-        return '\n'+self.name + ':\n'+'_'*45 +'\n'+ '\n'.join([show(i)+': '+show(self.model[i].witness_cache) for i in self.model])+'\n'+'_'*45+'\n'
+
 
 class AbsPath(object):
     def __init__(self,rec,path):
@@ -1053,12 +1133,19 @@ class TTRString(object):
         else:
             return TTRString(self.items+[s])
     def startswith(self,T):
-        for i in range(len(self.items)):
-            if T.query(TTRString(self.items[0:i+1])):
-                return(TTRString(self.items[i+1:]))
-            else:
-                pass
-        return(False)
+        firstT = next(filter(lambda x: T.query(x),[TTRString(self.items[0:i+1]) for i in range(len(self.items))]),None)
+        if firstT:
+            return TTRString(self.items[len(firstT.items):])
+        else:
+            return False
+                             
+            
+        # for i in range(len(self.items)):
+        #     if T.query(TTRString(self.items[0:i+1])):
+        #         return(TTRString(self.items[i+1:]))
+        #     else:
+        #         pass
+        # return(False)
     def startswith_recursive(self,T):
         res = self.startswith(T)
         if res is False:
@@ -1079,10 +1166,14 @@ class TTRString(object):
 #============================
 
 def equal(x,y):
-    if show(x) == show(y):
-        return True
+    # if show(x) == show(y):
+    #     return True
+    # else:
+    #     return False
+    if 'poss' in dir(x) and 'poss' in dir(y):
+        return x.poss == y.poss and show(x) == show(y)
     else:
-        return False
+        return show(x) == show(y)
 
 
 #============================

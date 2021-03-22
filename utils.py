@@ -1,6 +1,7 @@
 from itertools import count
 from IPython.display import Latex
 import re
+import inspect
 
 gennum = dict()
 
@@ -10,11 +11,47 @@ def gensym(x):
     #return x+'_{'+str(gennum[x].__next__())+'}'
     return x+str(gennum[x].__next__())
 
+# def some_condition(conds,obj,L):
+#     res = some_condition1(conds,obj,L)
+#     if 'loop_found' in L:
+#         res = False
+#     if len(list(filter(lambda x: x is 'query',[x[3] for x in inspect.stack()])))==1:
+#         L.clear()
+#     return res
+    
+    
 
 def some_condition(conds,obj):
-    if len(conds) == 0: return False
-    elif conds[0](obj) == True: return True
-    else: return some_condition(conds[1:],obj)
+    if len(conds) == 0:
+        return False
+    else:
+        if conds[0](obj) == True:
+             return True
+        else:
+            return some_condition(conds[1:],obj)
+
+def check_stack(f,argsd):
+    frames = filter(lambda x: x[3] == f and subdict(argsd,inspect.getargvalues(x[0]).locals),
+                    inspect.stack())
+    # fr1 = next(frames,None)
+    # if fr1:
+    #     print(list(inspect.getargvalues(fr1[0]).locals))
+    # else:
+    #     print('No fr1')
+    # fr2 = next(frames,None)
+    # if fr2:
+    #     print(list(inspect.getargvalues(fr2[0]).locals))
+    # else:
+    #     print('No fr2')
+    next(frames,None)
+    if next(frames,None):
+        return True
+                   
+#  and list(inspect.getargvalues(x[0]).locals.values())[:len(args)] == args
+
+def subdict(d1,d2):
+    return forall([k for k in d1], lambda key: key in d2 and d1[key] == d2[key])
+
 
 def forall(list,cond):
     if list == []: return True

@@ -1,14 +1,15 @@
+import inspect
 import ttrtypes
 from copy import deepcopy
-from ttrtypes import HypObj, LazyObj, equal, Pred
-from utils import show, showall, forsome, gensym
+from ttrtypes import HypObj, LazyObj, equal, Pred, add_to_model, _M
+from utils import show, showall, forsome, gensym, check_stack
 
 
 #----------------------------
 # Type classes
 #----------------------------
 
-class Type(ttrtypes.Type):
+class TypeClass(ttrtypes.TypeClass):
     def __init__(self,name='',cs={}):
         super().__init__(name,cs)
         self.witness_cache = ([],[])
@@ -103,7 +104,7 @@ class Type(ttrtypes.Type):
         elif [i for i in filter(lambda x: isinstance(x,tuple),c)
               if i[1].subtype_of(self)]:
             return PConstraint(1)
-        elif [i for i in filter(lambda x: isinstance(x,Type),c)
+        elif [i for i in filter(lambda x: isinstance(x,TypeClass),c)
               if i.subtype_of(self)]:
             return PConstraint(1)
         elif oracle:
@@ -122,17 +123,29 @@ class Type(ttrtypes.Type):
                 return True
             else: return False
 
-class BType(Type):
+def Type(name='',cs={},poss=_M):
+    T = TypeClass(name,cs)
+    return add_to_model(T,poss)
+
+
+
+class BTypeClass(TypeClass):
     def __init__(self,name=gensym('BT')):
-        ttrtypes.BType.__init__(self,name)
+        ttrtypes.BTypeClass.__init__(self,name)
         self.witness_cache = ([],[])
 
-class PType(Type):
+def BType(name=gensym('BT'),poss=_M):
+    T = BTypeClass(name)
+    return add_to_model(T,poss)
+
+
+
+class PTypeClass(TypeClass):
     def __init__(self,pred,args):
-        ttrtypes.PType.__init__(self,pred,args)
+        ttrtypes.PTypeClass.__init__(self,pred,args)
         self.witness_cache = ([],[])
-    show = ttrtypes.PType.show
-    to_latex = ttrtypes.PType.to_latex
+    show = ttrtypes.PTypeClass.show
+    to_latex = ttrtypes.PTypeClass.to_latex
     def validate(self):
         if isinstance(self.comps.pred,Pred) \
                 and len(self.comps.args) == len(self.comps.pred.arity):
@@ -141,17 +154,27 @@ class PType(Type):
                 else: return False
             return True
         else: return False
-    create = ttrtypes.PType.create
-    subst = ttrtypes.PType.subst
-    eval = ttrtypes.PType.eval
+    create = ttrtypes.PTypeClass.create
+    subst = ttrtypes.PTypeClass.subst
+    eval = ttrtypes.PTypeClass.eval
     def query(self,a,c=[],oracle=None):
-        if not c:
+        # print(list(inspect.getargvalues(inspect.stack()[0][0]).locals.values()))
+        # print(inspect.stack()[0][3])
+        # print([a,c,oracle,self])
+        # print(list(inspect.getargvalues(inspect.stack()[0][0]).locals.values())==[a,c,oracle,self])
+        # print(check_stack('query',[a,c,oracle,self]))
+        if check_stack('query',dict(a=a,c=c,oracle=oracle,self=self)):
+            return PConstraint(0,1)
+        elif not c:
             if a in self.witness_cache[0]:
+               # print(show(self),show(a))
                 return self.witness_cache[1][self.witness_cache[0].index(a)]
-            elif isinstance(a,HypObj) and show(self) in showall(a.types):
+            elif isinstance(a,HypObj) and next(map(lambda T: equal(T,self), a.types),None):
+                #show(self) in showall(a.types):
                 return PConstraint(1)
-            elif isinstance(a,HypObj) and forsome(a.types,
-                                                  lambda T: show(self) in showall(T.supertype_cache)):
+            elif isinstance(a,HypObj) and next(map(lambda T: next(map(lambda T1: equal(T1,self),
+                                                                      T.supertype_cache),None), a.types),None):
+                #forsome(a.types, lambda T: show(self) in showall(T.supertype_cache)):
                 return PConstraint(1)
             elif isinstance(a, LazyObj):
                 if isinstance(a.eval(), LazyObj):
@@ -165,9 +188,19 @@ class PType(Type):
                     self.witness_cache[0].append(a)
                     self.witness_cache[1].append(res)
             elif self.witness_conditions or self.comps.pred.witness_funs:
-                ps_witconds = list(map(lambda c: c(a), self.witness_conditions))
-                ps_witfuns = list(map(lambda f: f(self.comps.args).in_poss(self.poss).query(a,c,oracle), self.comps.pred.witness_funs))
-                res = PMax(ps_witconds+ps_witfuns)
+                condps = []
+                for c in self.witness_conditions:
+                    condps.append(c(a))
+                for f in self.comps.pred.witness_funs:
+                    type = f(self.comps.args).in_poss(self.poss)
+                    if check_stack('query',[a,c,oracle,type]):
+                        res = PConstraint(0,1)
+                    else:
+                        condps.append(type.query(a,c,oracle))
+                        res = PMax(condps)
+                # ps_witconds = list(map(lambda c: c(a), self.witness_conditions))
+                # ps_witfuns = list(map(lambda f: f(self.comps.args).query(a,c,oracle), self.comps.pred.witness_funs))
+                # res = PMax(ps_witconds+ps_witfuns)
                 if not isinstance(a,HypObj):
                     self.witness_cache[0].append(a)
                     self.witness_cache[1].append(res)
@@ -175,7 +208,10 @@ class PType(Type):
             else:
                 return PConstraint(0,1)
         elif [i for i in filter(lambda x: isinstance(x,tuple),c)
-                  if i[0]==a and i[1].subtype_of(self)]:
+              if i[0]==a and i[1].subtype_of(self)]:
+            return PConstraint(1)
+        elif [i for i in filter(lambda x: isinstance(x,TypeClass),c)
+              if i.subtype_of(self)]:
             return PConstraint(1)
         elif oracle:
             res = oracle(a,self,c)
@@ -189,7 +225,30 @@ class PType(Type):
 
         #filter(lambda x: x[1].max>0,zip(self.witness_cache[0],self.witness_cache[1]))
 
-       
+def PType(pred,args,poss=_M):
+    T = PTypeClass(pred,args)
+    return add_to_model(T,poss)
+
+class MeetType(TypeClass):
+    def __init__(self,T1,T2):
+        ttrtypes.MeetType.__init__(self,T1,T2)
+        self.witness_cache = ([],[])
+        self.witness_conditions = [lambda a,oracle: ConjProb([(a,self.comps.left.in_poss(self.poss)),
+                                                              (a,self.comps.right.in_poss(self.poss))],[],oracle)]
+    in_poss = ttrtypes.MeetType.in_poss
+    show = ttrtypes.MeetType.show
+    to_latex = ttrtypes.MeetType.to_latex
+    learn_witness_condition = ttrtypes.MeetType.learn_witness_condition
+    learn_witness_type = ttrtypes.MeetType.learn_witness_type
+    validate = ttrtypes.MeetType.validate
+    def judge(self,a,n=1,max=None):
+        p = PConstraint(n,max)
+        if p.min == p.max == 1:
+            self.comps.left.in_poss(self.poss).judge(a)
+            self.comps.right.in_poss(self.poss).judge(a)
+        return super().judge(a,n,max)
+            
+                                                            
 
 
 #--------------------
@@ -262,6 +321,16 @@ def PMax(plist):
                        max(map(lambda p: p.max, plist)))
 def PTimes(p1,p2):
     return PConstraint(p1.min*p2.min,p1.max*p2.max)
+def PDiv(p1,p2):
+    if p2.min>0:
+        min=p1.min/p2.min
+    else:
+        min=0
+    if p2.max>0:
+        max=p1.max/p2.max
+    else:
+        max=0
+    return PConstraint(min,max)
 def PMinus(p1,p2):
     return PConstraint(p1.min-p2.min,p1.max-p2.max)
 def PPlus(p1,p2):

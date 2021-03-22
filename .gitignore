@@ -28,7 +28,7 @@ __pycache__/records.cpython-37.pyc
 .ipynb_checkpoints/ttr-overview-aics2019-checkpoint.ipynb
 .ipynb_checkpoints/ttr-overview-wesslli2020-checkpoint.ipynb
 .ipynb_checkpoints/ttr-overview-aics2020-checkpoint.ipynb
-*.py#
-.ipynb_checkpoints/Untitled-checkpoint.ipynb
-*.~1~
+\#probttrtypes.py#
 .ipynb_checkpoints/probttr-checkpoint.ipynb
+probttrtypes.py.~1~
+.ipynb_checkpoints/NWFwitconds-checkpoint.ipynb

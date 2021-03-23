@@ -13,6 +13,7 @@ class TypeClass(ttrtypes.TypeClass):
     def __init__(self,name='',cs={}):
         super().__init__(name,cs)
         self.witness_cache = ([],[])
+        self.prob_nonspec = None
     def in_poss(self,poss):
         key = self.show()
         if poss == '':
@@ -51,6 +52,10 @@ class TypeClass(ttrtypes.TypeClass):
             self.witness_cache[1].append(p)
             return p
         else: return False
+    def judge_nonspec(self,n=1,max=None):
+        self.prob_nonspec = PConstraint(n,max)
+        return self.prob_nonspec
+        
     def query(self, a,c=[],oracle=None):
         if not c:
             if a in self.witness_cache[0]:
@@ -99,8 +104,12 @@ class TypeClass(ttrtypes.TypeClass):
             return res
     def query_nonspec(self,c=[],oracle=None):
         js = [(x,self) for x in self.witness_cache[0] if self.witness_cache[1][self.witness_cache[0].index(x)].max>0]
+        p_nonspec = self.prob_nonspec
         if not c:
-            return DisjProb(js,c,oracle)
+            if p_nonspec:
+                return PMax([p_nonspec,DisjProb(js,c,oracle)])
+            else:
+                return DisjProb(js,c,oracle)
         elif [i for i in filter(lambda x: isinstance(x,tuple),c)
               if i[1].subtype_of(self)]:
             return PConstraint(1)
@@ -108,9 +117,15 @@ class TypeClass(ttrtypes.TypeClass):
               if i.subtype_of(self)]:
             return PConstraint(1)
         elif oracle:
-            return DisjProb(js,c,oracle)
+            if p_nonspec:
+                return PMax([p_nonspec,DisjProb(js,c,oracle)])
+            else:
+                return DisjProb(js,c,oracle)
         else:
-            return DisjProb(js)
+            if p_nonspec:
+                return PMax([p_nonspec,DisjProb(js)])
+            else:
+                return DisjProb(js)
     def subtype_of(self,T):
         if T in self.supertype_cache: 
             return True
@@ -133,7 +148,8 @@ class BTypeClass(TypeClass):
     def __init__(self,name=gensym('BT')):
         ttrtypes.BTypeClass.__init__(self,name)
         self.witness_cache = ([],[])
-
+        self.prob_nonspec = None
+        
 def BType(name=gensym('BT'),poss=_M):
     T = BTypeClass(name)
     return add_to_model(T,poss)
@@ -144,6 +160,7 @@ class PTypeClass(TypeClass):
     def __init__(self,pred,args):
         ttrtypes.PTypeClass.__init__(self,pred,args)
         self.witness_cache = ([],[])
+        self.prob_nonspec = None
     show = ttrtypes.PTypeClass.show
     to_latex = ttrtypes.PTypeClass.to_latex
     def validate(self):
@@ -233,6 +250,7 @@ class MeetType(TypeClass):
     def __init__(self,T1,T2):
         ttrtypes.MeetType.__init__(self,T1,T2)
         self.witness_cache = ([],[])
+        self.prob_nonspec = None
         self.witness_conditions = [lambda a,oracle: ConjProb([(a,self.comps.left.in_poss(self.poss)),
                                                               (a,self.comps.right.in_poss(self.poss))],[],oracle)]
     in_poss = ttrtypes.MeetType.in_poss
@@ -247,7 +265,12 @@ class MeetType(TypeClass):
             self.comps.left.in_poss(self.poss).judge(a)
             self.comps.right.in_poss(self.poss).judge(a)
         return super().judge(a,n,max)
-            
+    def judge_nonspec(self,n=1,max=None):
+        p = PConstraint(n,max)
+        if p.min == p.max == 1:
+            self.comps.left.in_poss(self.poss).judge_nonspec()
+            self.comps.right.in_poss(self.poss).judge_nonspec()
+        return super().judge_nonspec(n,max)         
                                                             
 
 

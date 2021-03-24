@@ -2,7 +2,7 @@ import inspect
 import ttrtypes
 from copy import deepcopy
 from ttrtypes import HypObj, LazyObj, equal, Pred, add_to_model, _M
-from utils import show, showall, forsome, gensym, check_stack
+from utils import show, showall, forsome, gensym, check_stack, apply12
 
 
 #----------------------------
@@ -78,7 +78,7 @@ class TypeClass(ttrtypes.TypeClass):
                     self.witness_cache[1].append(res)
                 return res
             elif self.witness_conditions:
-                ps = list(map(lambda c: c(a), self.witness_conditions))
+                ps = list(map(lambda c: apply12(c,a,oracle), self.witness_conditions))
                 res = PMax(ps)
                 if not isinstance(a,HypObj):
                     self.witness_cache[0].append(a)
@@ -107,9 +107,15 @@ class TypeClass(ttrtypes.TypeClass):
         p_nonspec = self.prob_nonspec
         if not c:
             if p_nonspec:
-                return PMax([p_nonspec,DisjProb(js,c,oracle)])
+                if self.witness_cache[0]:
+                    return PMax([p_nonspec,DisjProb(js,c,oracle)])
+                else:
+                    return p_nonspec
             else:
-                return DisjProb(js,c,oracle)
+                if self.witness_cache[0]:
+                    return DisjProb(js,c,oracle)
+                else:
+                    return PConstraint(0,1)
         elif [i for i in filter(lambda x: isinstance(x,tuple),c)
               if i[1].subtype_of(self)]:
             return PConstraint(1)
@@ -118,14 +124,26 @@ class TypeClass(ttrtypes.TypeClass):
             return PConstraint(1)
         elif oracle:
             if p_nonspec:
-                return PMax([p_nonspec,DisjProb(js,c,oracle)])
+                if self.witness_cache[0]:
+                    return PMax([p_nonspec,DisjProb(js,c,oracle)])
+                else:
+                    return p_nonspec
             else:
-                return DisjProb(js,c,oracle)
+                if self.witness_cache[0]:
+                    return DisjProb(js,c,oracle)
+                else:
+                    return PConstraint(0,1)
         else:
             if p_nonspec:
-                return PMax([p_nonspec,DisjProb(js)])
+                if self.witness_cache[0]:
+                    return PMax([p_nonspec,DisjProb(js)])
+                else:
+                    return p_nonspec
             else:
-                return DisjProb(js)
+                if self.witness_cache[0]:
+                    return DisjProb(js)
+                else:
+                    return PConstraint(0,1)
     def subtype_of(self,T):
         if T in self.supertype_cache: 
             return True
@@ -270,7 +288,18 @@ class MeetType(TypeClass):
         if p.min == p.max == 1:
             self.comps.left.in_poss(self.poss).judge_nonspec()
             self.comps.right.in_poss(self.poss).judge_nonspec()
-        return super().judge_nonspec(n,max)         
+        return super().judge_nonspec(n,max)
+    def create(self):
+        a = self.comps.left.create()
+        self.comps.right.judge(a)
+        self.witness_cache[0].append(a)
+        self.witness_cache[1].append(PConstraint(1))
+        return a
+    create_hypobj = ttrtypes.MeetType.create_hypobj
+    subst = ttrtypes.MeetType.subst
+
+# class JoinType(TypeClass):
+#     def __init__(self,T1,T2)
                                                             
 
 

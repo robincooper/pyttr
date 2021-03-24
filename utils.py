@@ -52,6 +52,11 @@ def check_stack(f,argsd):
 def subdict(d1,d2):
     return forall([k for k in d1], lambda key: key in d2 and d1[key] == d2[key])
 
+def apply12(f,x,y):
+    if f.__code__.co_argcount == 1:
+        return f(x)
+    else:
+        return f(x,y)
 
 def forall(list,cond):
     if list == []: return True

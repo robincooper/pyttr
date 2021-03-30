@@ -393,11 +393,64 @@ class MeetType(TypeClass):
     create_hypobj = ttrtypes.MeetType.create_hypobj
     subst = ttrtypes.MeetType.subst
 
-# class JoinType(TypeClass):
-#     def __init__(self,T1,T2)
-                                                            
+class JoinType(TypeClass):
+    def __init__(self,T1,T2):
+        ttrtypes.JoinType.__init__(self,T1,T2)
+        self.witness_cache = ([],[])
+        self.prob_nonspec = None
+        self.witness_conditions = [lambda a,c,oracle: DisjProb([(a,self.comps.left.in_poss(self.poss)),
+                                                              (a,self.comps.right.in_poss(self.poss))],c,oracle)]
+        self._query_methods = ['_query_witness_cache','_query_hypobj','_query_lazyobj','_query_conditions','_query_oracle','_query_witness_types','_query_witness_conditions']
+    in_poss = ttrtypes.JoinType.in_poss
+    show = ttrtypes.JoinType.show
+    to_latex = ttrtypes.JoinType.to_latex
+    learn_witness_condition = ttrtypes.JoinType.learn_witness_condition
+    learn_witness_type = ttrtypes.JoinType.learn_witness_type
+    validate = ttrtypes.JoinType.validate
+    def judge(self,a,n=1,max=None):
+        p = PConstraint(n,max)
+        if p.min == p.max == 0:
+            self.comps.left.in_poss(self.poss).judge(a,0)
+            self.comps.right.in_poss(self.poss).judge(a,0)
+        return super().judge(a,n,max)
+    def judge_nonspec(self,n=1,max=None):
+        p = PConstraint(n,max)
+        if p.min == p.max == 0:
+            self.comps.left.in_poss(self.poss).judge_nonspec(0)
+            self.comps.right.in_poss(self.poss).judge_nonspec(0)
+        return super().judge_nonspec(n,max)
+    subtype_of = ttrtypes.JoinType.subtype_of
+    subst = ttrtypes.JoinType.subst
 
+# FunType to be implemented
 
+# ListType to be implemented
+
+# SingletonType to be implemented
+
+class RecType(TypeClass):
+    def __init__(self,d={}):
+        ttrtypes.RecType.__init__(self,d)
+        self.witness_cache = ([],[])
+        self.prob_nonspec = None
+        self.witness_conditions = [lambda r,c,oracle: RecOfRecType(r,self,self.poss,c,oracle)]
+        self._query_methods = ['_query_witness_cache','_query_hypobj','_query_lazyobj','_query_conditions','_query_oracle','_query_witness_types','_query_witness_conditions']
+    in_poss = ttrtypes.RecType.in_poss
+    show = ttrtypes.RecType.show
+    to_latex = ttrtypes.RecType.to_latex
+    validate = ttrtypes.RecType.validate
+    addfield = ttrtypes.RecType.addfield
+    pathvalue = ttrtypes.RecType.pathvalue
+    learn_witness_condition = ttrtypes.RecType.learn_witness_condition
+    learn_witness_type = ttrtypes.RecType.learn_witness_type
+    create = ttrtypes.RecType.create
+    create_hypobj = ttrtypes.RecType.create_hypobj
+    Relabel = ttrtypes.RecType.Relabel
+    subst = ttrtypes.RecType.subst
+    eval = ttrtypes.RecType.eval
+    merge = ttrtypes.RecType.merge
+    amerge = ttrtypes.RecType.amerge
+    
 #--------------------
 # Probability classes
 #--------------------

@@ -707,7 +707,7 @@ def RecOfRecType(r,T,M):
 def QueryField(l,r,T,M):
     TInField = T.comps.__getattribute__(l)
     Obj = r.__getattribute__(l)
-    if isinstance(Obj,HypObj):
+    if isinstance(Obj,HypObj):  # Should this be removed now?
         M = _M
     if isinstance(TInField, TypeClass):
         return TInField.in_poss(M).query(Obj) 

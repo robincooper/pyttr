@@ -1,9 +1,9 @@
 import inspect
 import ttrtypes
 from copy import deepcopy
-from ttrtypes import HypObj, LazyObj, equal, Pred, add_to_model, _M
+from ttrtypes import HypObj, LazyObj, equal, Pred, add_to_model, _M, ComputeDepType, Fun
 from utils import show, showall, forsome, gensym, check_stack, apply123
-
+from records import Rec
 
 #----------------------------
 # Type classes
@@ -450,7 +450,35 @@ class RecType(TypeClass):
     eval = ttrtypes.RecType.eval
     merge = ttrtypes.RecType.merge
     amerge = ttrtypes.RecType.amerge
-    
+
+def RecOfRecType(r,T,M,c,oracle):
+    if not isinstance(r,Rec):
+        return PConstraint(0)
+    else:
+        TypeLabels = [l for l in T.comps.__dict__]
+        RecordLabels = [l for l in r.__dict__]
+        if forsome(TypeLabels, lambda l: l not in RecordLabels):
+            return PConstraint(0)
+        else:
+            return ConjProb(list(map(lambda l: QueryField(l,r,T,M),TypeLabels)),c,oracle)
+        # elif forall(TypeLabels, lambda l: l in RecordLabels and QueryField(l,r,T,M)):
+        #     return True
+        # else:
+        #     return False
+def QueryField(l,r,T,M):
+    TInField = T.comps.__getattribute__(l)
+    Obj = r.__getattribute__(l)
+    # if isinstance(Obj,HypObj):
+    #     M = _M
+    if isinstance(TInField, TypeClass):
+        return (Obj,TInField.in_poss(M))
+    #TInField.in_poss(M).query(Obj) 
+    else:
+        TResolved = ComputeDepType(r,TInField,M)
+        return (Obj,TResolved.in_poss(M))
+    #TResolved.in_poss(M).query(Obj)
+
+
 #--------------------
 # Probability classes
 #--------------------

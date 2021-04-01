@@ -53,10 +53,10 @@ class TypeClass:
         self.supertype_cache = []
         self.witness_conditions = []
         self.witness_types = []
-        self.poss = ''
+        self.poss = _M
     def in_poss(self,poss):
         key = self.show()
-        if poss == '':
+        if poss == _M:
             return self
         elif key not in poss.model:
             poss.model[key] = deepcopy(self)
@@ -98,7 +98,7 @@ class TypeClass:
             self.create()
         return True
     def query(self, a):
-        if check_stack('query', [a,self]):
+        if check_stack('query', dict(a=a,self=self)):
              return '*'
         elif a in self.witness_cache: return True
         elif isinstance(a,HypObj) and show(self) in showall(a.types):
@@ -176,7 +176,11 @@ class BTypeClass(TypeClass):
         self.supertype_cache = []
         self.witness_conditions = []
         self.witness_types = []
-        self.poss = ''
+        self.poss = _M
+
+def BType(name=gensym('BT'),poss=_M):
+    T = BTypeClass(name)
+    return add_to_model(T,poss)
 
 def BType(name=gensym('BT'),poss=_M):
     T = BTypeClass(name)
@@ -216,7 +220,7 @@ class PTypeClass(TypeClass):
                 if arg == v: newargs.append(a)
                 elif isinstance(arg,str): newargs.append(arg)
                 else: newargs.append(substitute(arg,v,a))      #arg.subst(v,a))
-            return PType(self.comps.pred,newargs)
+            return PType(self.comps.pred,newargs).in_poss(self.poss)
     def eval(self):
         newargs = []
         for arg in self.comps.args:
@@ -231,7 +235,7 @@ class PTypeClass(TypeClass):
         # if super().query(a):
         #     print('super',super().query(a))
         #     return True
-        if check_stack('query', [a,self]):
+        if check_stack('query', dict(a=a,self=self)):
              return '*'
         elif a in self.witness_cache: return True
         elif isinstance(a,HypObj) and show(self) in showall(a.types):
@@ -318,9 +322,7 @@ class MeetType(TypeClass):
         if self == v:
             return a
         else:
-            return MeetType(self.comps.left.subst(v,a),self.comps.right.subst(v,a))
-
-
+            return MeetType(self.comps.left.subst(v,a),self.comps.right.subst(v,a)).in_poss(self.poss)
 
 class JoinType(TypeClass):
     def __init__(self,T1,T2): 
@@ -707,8 +709,8 @@ def RecOfRecType(r,T,M):
 def QueryField(l,r,T,M):
     TInField = T.comps.__getattribute__(l)
     Obj = r.__getattribute__(l)
-    if isinstance(Obj,HypObj):
-        M = ''
+    if isinstance(Obj,HypObj):  # Should this be removed now?
+        M = _M
     if isinstance(TInField, TypeClass):
         return TInField.in_poss(M).query(Obj) 
     else:
@@ -1166,10 +1168,14 @@ class TTRString(object):
 #============================
 
 def equal(x,y):
-    if show(x) == show(y):
-        return True
+    # if show(x) == show(y):
+    #     return True
+    # else:
+    #     return False
+    if 'poss' in dir(x) and 'poss' in dir(y):
+        return x.poss == y.poss and show(x) == show(y)
     else:
-        return False
+        return show(x) == show(y)
 
 
 #============================

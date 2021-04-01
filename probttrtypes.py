@@ -2,7 +2,7 @@ import inspect
 import ttrtypes
 from copy import deepcopy
 from ttrtypes import HypObj, LazyObj, equal, Pred, add_to_model, _M, ComputeDepType, Fun
-from utils import show, showall, forsome, gensym, check_stack, apply123
+from utils import show, showall, forsome, gensym, check_stack, apply123, ttracing
 from records import Rec
 
 #----------------------------
@@ -114,6 +114,8 @@ class TypeClass(ttrtypes.TypeClass):
     #         else:
     #             return PConstraint(0,1)
     def query(self, a,c=[],oracle=None):
+        if ttracing('query'):
+            print('query args: ',show([self,a,c,oracle]))
         if check_stack('query',dict(a=a,c=c,oracle=oracle,self=self)):
             return PConstraint(0,1)
         for m in self._query_methods:
@@ -221,6 +223,8 @@ class TypeClass(ttrtypes.TypeClass):
                 else:
                     return PConstraint(0,1)
     def subtype_of(self,T):
+        if ttracing('subtype_of'):
+            print('subtype_of args: ',show([self,T]))
         if T in self.supertype_cache: 
             return True
         elif equal(self,T):
@@ -460,12 +464,15 @@ def RecOfRecType(r,T,M,c,oracle):
         if forsome(TypeLabels, lambda l: l not in RecordLabels):
             return PConstraint(0)
         else:
+            #print(show(ConjProb(list(map(lambda l: QueryField(l,r,T,M),TypeLabels)),c,oracle)))
             return ConjProb(list(map(lambda l: QueryField(l,r,T,M),TypeLabels)),c,oracle)
         # elif forall(TypeLabels, lambda l: l in RecordLabels and QueryField(l,r,T,M)):
         #     return True
         # else:
         #     return False
 def QueryField(l,r,T,M):
+    if ttracing('QueryField'):
+        print('QueryField args: ', show([l,r,T,M]))
     TInField = T.comps.__getattribute__(l)
     Obj = r.__getattribute__(l)
     # if isinstance(Obj,HypObj):
@@ -475,6 +482,8 @@ def QueryField(l,r,T,M):
     #TInField.in_poss(M).query(Obj) 
     else:
         TResolved = ComputeDepType(r,TInField,M)
+        if ttracing('TResolved'):
+            print('TResolved is: ', show((Obj,TResolved.in_poss(M))))
         return (Obj,TResolved.in_poss(M))
     #TResolved.in_poss(M).query(Obj)
 
@@ -566,6 +575,8 @@ def PPlus(p1,p2):
 def ConjProb(jlist,c=[],oracle=None):
     # print(show(jlist))
     # print(show(c))
+    if ttracing('ConjProb'):
+        print('ConjProb args: ',show([jlist,c,oracle]))
     if len(jlist) == 0:
         return PConstraint(1)
     elif len(jlist) == 1:

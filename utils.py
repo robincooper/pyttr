@@ -30,15 +30,38 @@ def some_condition(conds,obj):
         else:
             return some_condition(conds[1:],obj)
 
-def check_stack(f,args):
-    frames = filter(lambda x: x[3] == f and list(inspect.getargvalues(x[0]).locals.values())[:len(args)] == args,
-                   inspect.stack())
+
+def check_stack(f,argsd):
+    frames = filter(lambda x: x[3] == f and subdict(argsd,inspect.getargvalues(x[0]).locals),
+                    inspect.stack())
+    # fr1 = next(frames,None)
+    # if fr1:
+    #     print(list(inspect.getargvalues(fr1[0]).locals))
+    # else:
+    #     print('No fr1')
+    # fr2 = next(frames,None)
+    # if fr2:
+    #     print(list(inspect.getargvalues(fr2[0]).locals))
+    # else:
+    #     print('No fr2')
     next(frames,None)
     if next(frames,None):
         return True
                    
 
+#  and list(inspect.getargvalues(x[0]).locals.values())[:len(args)] == args
 
+def subdict(d1,d2):
+    return forall([k for k in d1], lambda key: key in d2 and d1[key] == d2[key])
+
+def apply123(f,x,y,z):
+    n = f.__code__.co_argcount
+    if n == 1:
+        return f(x)
+    elif n == 2:
+        return f(x,y)
+    else:
+        return f(x,y,z)
 
 def forall(list,cond):
     if list == []: return True

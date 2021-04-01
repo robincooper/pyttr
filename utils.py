@@ -30,6 +30,7 @@ def some_condition(conds,obj):
         else:
             return some_condition(conds[1:],obj)
 
+
 def check_stack(f,argsd):
     frames = filter(lambda x: x[3] == f and subdict(argsd,inspect.getargvalues(x[0]).locals),
                     inspect.stack())
@@ -47,6 +48,7 @@ def check_stack(f,argsd):
     if next(frames,None):
         return True
                    
+
 #  and list(inspect.getargvalues(x[0]).locals.values())[:len(args)] == args
 
 def subdict(d1,d2):

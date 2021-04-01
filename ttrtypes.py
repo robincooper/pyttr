@@ -182,6 +182,10 @@ def BType(name=gensym('BT'),poss=_M):
     T = BTypeClass(name)
     return add_to_model(T,poss)
 
+def BType(name=gensym('BT'),poss=_M):
+    T = BTypeClass(name)
+    return add_to_model(T,poss)
+
     
 class PTypeClass(TypeClass):
     def __init__(self,pred,args): 
@@ -319,8 +323,6 @@ class MeetType(TypeClass):
             return a
         else:
             return MeetType(self.comps.left.subst(v,a),self.comps.right.subst(v,a)).in_poss(self.poss)
-
-
 
 class JoinType(TypeClass):
     def __init__(self,T1,T2): 

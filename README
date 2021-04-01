@@ -164,3 +164,5 @@ Corrected some bugs relating to string types.
 Initial partial implementation of probabilistic TTR including basic
 types, meet types, join types and record types with conditional
 probabilities.  See the notebook probttr.ipynb.
+
+

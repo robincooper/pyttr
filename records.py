@@ -138,8 +138,30 @@ class Rec(object):
         for l in self.__dict__.keys():
             res.addpath(l, self.__getattribute__(l))
         return res
-                
 
-
+    def addrec(self,r):
+        res = Rec()
+        for l in [l for l in self.__dict__ if not l in r.__dict__]:
+            res.addfield(l,self.__getattribute__(l))
+        for l in [l for l in self.__dict__ if l in r.__dict__]:
+            rl = r.__getattribute__(l)
+            #print('rl: ',show(rl))
+            sl = self.__getattribute__(l)
+            #print('sl: ',show(sl))
+            if isinstance(rl, Rec) and isinstance(sl,Rec):
+                res1 = sl.addrec(rl)
+                #print('res1: ',show(res1))
+                if res1:
+                    res.addfield(l,res1)
+                else:
+                    return None
+            elif rl == sl:
+                res.addfield(l,rl)
+            else:
+                return None
+        for l in [l for l in r.__dict__ if not l in self.__dict__]:
+            res.addfield(l,r.__getattribute__(l))
+        return res
+ 
 
     

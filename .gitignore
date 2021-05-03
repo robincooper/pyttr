@@ -40,3 +40,4 @@ auto/probttr.el
 *.log
 *.out
 probttr.synctex.gz
+*.py#

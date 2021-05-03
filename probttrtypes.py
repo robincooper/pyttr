@@ -1,6 +1,7 @@
 import numpy as np
 import inspect
 import config
+#from copy import deepcopy
 import ttrtypes
 from copy import deepcopy
 from ttrtypes import HypObj, LazyObj, equal, Pred, add_to_model, _M, ComputeDepType, Fun
@@ -301,20 +302,33 @@ class PTypeClass(TypeClass):
             return res
         else:
             return None
-    def matches(self,poss,n,vars=[],vartypes=[]):
+    def matches(self,poss,n,vs=[],vartypes=[],varvalues=[]):
         pred = self.comps.pred
         args = self.comps.args
-        res = [T for T in poss.model.values() if isinstance(T, PTypeClass) and (pred in vars or pred == T.comps.pred) and matchlist(args,T.comps.args,poss,vars,vartypes)]
+        res = []
+        for T in poss.model.values():
+            newvarvalues = varvalues.copy()
+            if isinstance(T, PTypeClass):
+                if pred in vs:
+                    newvarvalues[vs.index(pred)] = T.comps.pred
+                    matchlist(args,T.comps.args,poss,vs,vartypes,newvarvalues)
+                    res.append((T,newvarvalues))
+                elif pred == T.comps.pred:
+                    matchlist(args,T.comps.args,poss,vs,vartypes,newvarvalues)
+                    res.append((T,newvarvalues))
+                else:
+                    pass
         if len(res)<=n:
             return res
         else:
             return list(np.random.choice(res,n,False))
 
-def matchlist(l1,l2,poss,vars=[],vartypes=[]):
+def matchlist(l1,l2,poss,vs=[],vartypes=[],varvalues=[]):
     lgth = len(l1)
     if lgth == len(l2):
         for i in range(lgth):
-            if l1[i] in vars and vartypes[vars.index(l1[i])].in_poss(poss).query(l2[i]).max>0:
+            if l1[i] in vs and vartypes[vs.index(l1[i])].in_poss(poss).query(l2[i]).max>0:
+                varvalues[vs.index(l1[i])] = l2[i]
                 pass
             elif l1[i] == l2[i]:
                 pass
@@ -492,28 +506,103 @@ class RecType(TypeClass):
     merge = ttrtypes.RecType.merge
     amerge = ttrtypes.RecType.amerge
     def sample(self,n=config.sample_size):
-        res = [Rec()]*n
+        chart = {}
+        count = -1
         nondepfields = RecType()
         for l in self.comps.__dict__:
             T = self.comps.__getattribute__(l)
             if isinstance(T,RecType):
+                count = count+1
+                chart[count] = []
                 vals = T.in_poss(self.poss).sample(n)
-                for i in range(len(vals)):
-                    res[i].addfield(l,vals[i])
+                #print(show(T.in_poss(self.poss)))
+                #print(vals)
+                if count == 0:
+                    for r in vals:
+                        chart[count].append(Rec({l:r}))
+                    #print(chart)
+                else:
+                    for r in vals:
+                        for rec in chart[count-1]:
+                            combrec = rec.addrec(Rec({l:r}))
+                            if combrec:
+                                chart[count].append(combrec)
+                            else:
+                                pass
             elif isinstance(T,TypeClass):
                 nondepfields.addfield(l,T)
             else:
+                count = count+1
+                chart[count] = []
                 matches = T[0].matches(self.poss,n)
-                for i in range(len(matches)):
-                    for j in range(len(T[1])):
-                        if res[i].pathvalue(T[1][j]):
-                            if res[i].pathvalue(T[1][j]) == matches[i][1][j]:
-                                pass
-                            else:
-                                return # ????
+                #print('matches: ', show(matches))
+                for m in matches:
+                    for s in m[0].in_poss(self.poss).sample(n):
+                        r = Rec({l:s})
+                        #print('r: ',show(r))
+                        #print('T[1]',show(T[1]))
+                        for p in T[1]:
+                            newrec = Rec({})
+                            newrec.addpath(p,m[1][T[1].index(p)])
+                            #print('newrec:',show(newrec))
+                            r = r.addrec(newrec)
+                            #print('r after addrec: ',show(r))
+                        if count == 0:
+                            chart[count].append(r)
                         else:
-                            res[i].addpath(T[1][j],matches[i][1][j])
-                    res[i].addfield(l,matches[i][0].sample(1)[0])
+                            for rec in chart[count-1]:
+                                combrec = rec.addrec(r)
+                                if combrec:
+                                        chart[count].append(combrec)
+        count = count+1
+        chart[count] = []
+        print(show(nondepfields))
+        if count == 0:
+            newrecs = []
+            for l in nondepfields.comps.__dict__:
+               matches = nondepfields.comps.__getattribute__(l).in_poss(self.poss).sample(n)
+               if newrecs == []:
+                   for i in range(2*n):
+                       m = np.random.choice(matches)
+                       newrecs.append(Rec({l:m}))
+               else:
+                   for i in range(len(newrecs)):
+                       m = np.random.choice(matches)
+                       newrecs[i] = newrecs[i].addrec(Rec({l:m}))
+            for r in newrecs:
+                chart[count].append(r)
+        else:
+            for rec in chart[count-1]:
+                #print([l for l in rec.__dict__],[l for l in nondepfields.comps.__dict__]) 
+                if set([l for l in nondepfields.comps.__dict__]).issubset(set([l for l in rec.__dict__])):
+                    chart[count].append(rec)
+                else:
+                    newrecs = []
+                    for l in [l for l in nondepfields.comps.__dict__ if not l in rec.__dict__]:
+                       matches = nondepfields.comps.__getattribute__(l).in_poss(self.poss).sample(n)
+                       if newrecs == []:
+                           for m in matches:
+                               newrecs.append(Rec({l:m}))
+                       else:
+                           for r in newrecs:
+                               m = np.random.choice(matches)
+                               r.addrec(Rec({l:m}))
+                    for r in newrecs:
+                        chart[count].append(rec.addrec(r))
+        print(show(chart))
+        
+        res = []
+        for r in chart[count]:
+            if not any(map(lambda x: equal(x,r),res)):
+                res.append(r)
+        if len(res)<=n:
+            return res
+        else:
+            return list(np.random.choice(res,n,False))
+        #return chart[count]
+        
+                
+              
                     
                     
                 
@@ -614,7 +703,7 @@ class PConstraint:
             return '<='+str(self.max)
         else:
             return '>='+str(self.min)+'&<='+str(self.max)
-    def to_latex(self,vars=[]):
+    def to_latex(self,vs=[]):
         if self.max == self.min:
             return str(self.min)
         # elif self.min == 0 and self.max == 1:
@@ -688,5 +777,5 @@ class Possibility(ttrtypes.Possibility):
         return '\n'+self.name + ':\n'+'_'*45 +'\n'+ '\n'.join([show(i)+': '+show(list(zip(self.model[i].witness_cache[0],self.model[i].witness_cache[1]))) for i in self.model])+'\n'+'_'*45+'\n'
 
 class Fun(ttrtypes.Fun):
-    def matches(self,poss,n,vars=[],vartypes=[]):
-        return self.body.matches(poss,n,vars+[self.var],vartypes+[self.domain_type])
+    def matches(self,poss,n,vs=[],vartypes=[],varvalues=[]):
+        return self.body.matches(poss,n,vs+[self.var],vartypes+[self.domain_type],varvalues+[None])

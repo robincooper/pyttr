@@ -32,3 +32,12 @@ __pycache__/records.cpython-37.pyc
 .ipynb_checkpoints/probttr-checkpoint.ipynb
 probttrtypes.py.~1~
 .ipynb_checkpoints/NWFwitconds-checkpoint.ipynb
+auto/probttr.el
+*.~1~
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+probttr.synctex.gz
+*.py#

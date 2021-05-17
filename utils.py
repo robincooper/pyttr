@@ -80,6 +80,8 @@ def show(obj):
         return obj
     elif isinstance(obj,list):
         return '['+ ', '.join([show(x) for x in obj])+']'
+    elif isinstance(obj,set):
+        return '{'+ ', '.join([show(x) for x in obj])+'}'
     elif isinstance(obj,tuple):
         return '('+ ', '.join([show(x) for x in obj])+')'
     elif isinstance(obj,dict):
@@ -184,6 +186,7 @@ def substitute(obj,v,a):
 
 def example(num):
     print('\n\nExample '+str(num)+':\n')
+
 
 
 ######################

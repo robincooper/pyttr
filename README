@@ -165,4 +165,11 @@ Initial partial implementation of probabilistic TTR including basic
 types, meet types, join types and record types with conditional
 probabilities.  See the notebook probttr.ipynb.
 
+17 May 2021
+
+Added sampling for non-specific querying of record types.  See the
+notebook probttr.ipynb.
+
+
+
 

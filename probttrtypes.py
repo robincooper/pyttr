@@ -1,7 +1,6 @@
 import numpy as np
 import inspect
 import config
-#from copy import deepcopy
 import ttrtypes
 from copy import deepcopy
 from ttrtypes import HypObj, LazyObj, equal, Pred, add_to_model, _M, ComputeDepType, Fun
@@ -186,7 +185,8 @@ class TypeClass(ttrtypes.TypeClass):
             self.witness_cache[0].remove(a)
             return res
     def query_nonspec(self,c=[],oracle=None):
-        js = [(x,self) for x in self.witness_cache[0] if self.witness_cache[1][self.witness_cache[0].index(x)].max>0]
+        js = [(x,self) for x in self.sample()]
+        #[(x,self) for x in self.witness_cache[0] if self.witness_cache[1][self.witness_cache[0].index(x)].max>0]
         p_nonspec = self.prob_nonspec
         if not c:
             if p_nonspec:
@@ -195,7 +195,7 @@ class TypeClass(ttrtypes.TypeClass):
                 else:
                     return p_nonspec
             else:
-                if self.witness_cache[0]:
+                if js:
                     return DisjProb(js,c,oracle)
                 else:
                     return PConstraint(0,1)
@@ -245,7 +245,7 @@ class TypeClass(ttrtypes.TypeClass):
         if len(wits)<=n:
             return wits
         else:
-            return np.random.choice(wits,n,False)
+            return list(np.random.choice(wits,n,False))
 
 def Type(name='',cs={},poss=_M):
     T = TypeClass(name,cs)
@@ -556,7 +556,7 @@ class RecType(TypeClass):
                                         chart[count].append(combrec)
         count = count+1
         chart[count] = []
-        print(show(nondepfields))
+        #print(show(nondepfields))
         if count == 0:
             newrecs = []
             for l in nondepfields.comps.__dict__:
@@ -581,16 +581,21 @@ class RecType(TypeClass):
                     for l in [l for l in nondepfields.comps.__dict__ if not l in rec.__dict__]:
                        matches = nondepfields.comps.__getattribute__(l).in_poss(self.poss).sample(n)
                        if newrecs == []:
-                           for m in matches:
-                               newrecs.append(Rec({l:m}))
-                       else:
-                           for r in newrecs:
+                           for i in range(2*n):
                                m = np.random.choice(matches)
-                               r.addrec(Rec({l:m}))
+                               newrecs.append(Rec({l:m}))
+                           # for m in matches:
+                           #     newrecs.append(Rec({l:m}))
+                       else:
+                           for i in range(len(newrecs)):
+                               m = np.random.choice(matches)
+                               newrecs[i] = newrecs[i].addrec(Rec({l:m}))
+                           # for r in newrecs:
+                           #     m = np.random.choice(matches)
+                           #     r.addrec(Rec({l:m}))
                     for r in newrecs:
                         chart[count].append(rec.addrec(r))
-        print(show(chart))
-        
+        #print(show(chart))
         res = []
         for r in chart[count]:
             if not any(map(lambda x: equal(x,r),res)):
@@ -600,6 +605,7 @@ class RecType(TypeClass):
         else:
             return list(np.random.choice(res,n,False))
         #return chart[count]
+    
         
                 
               

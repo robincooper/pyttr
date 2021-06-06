@@ -2,7 +2,7 @@ import numpy as np
 import inspect
 import config
 import ttrtypes
-from copy import deepcopy
+from copy import deepcopy, copy
 from ttrtypes import HypObj, LazyObj, equal, Pred, add_to_model, _M, ComputeDepType, Fun
 from utils import show, showall, forsome, gensym, check_stack, apply123, ttracing
 from records import Rec
@@ -139,6 +139,7 @@ class TypeClass(ttrtypes.TypeClass):
             return PConstraint(0,1)
     def _query_witness_cache(self,a,c,oracle):
         if not c and a in self.witness_cache[0]:
+            #print(show(self),show(self.witness_cache))
             return self.witness_cache[1][self.witness_cache[0].index(a)]
     def _query_hypobj(self,a,c,oracle):
         if isinstance(a,HypObj) and (next(map(lambda T: equal(T,self), a.types),None) or
@@ -186,6 +187,15 @@ class TypeClass(ttrtypes.TypeClass):
             return res
     def query_nonspec(self,c=[],oracle=None):
         js = [(x,self) for x in self.sample()]
+        for cond in c:
+            if isinstance(cond,TypeClass):
+                for x in cond.sample():
+                    if (x,self) not in js:
+                        js.append((x,self))
+            elif isinstance(cond,tuple):
+                for x in cond[1].sample():
+                    if (x,self) not in js:
+                        js.append((x,self))
         #[(x,self) for x in self.witness_cache[0] if self.witness_cache[1][self.witness_cache[0].index(x)].max>0]
         p_nonspec = self.prob_nonspec
         if not c:
@@ -206,13 +216,19 @@ class TypeClass(ttrtypes.TypeClass):
               if i.subtype_of(self)]:
             return PConstraint(1)
         elif oracle:
+            oracle_nonspec = oracle(None,self,c)
             if p_nonspec:
-                if self.witness_cache[0]:
+                if oracle_nonspec:
+                    return PMax([p_nonspec,oracle_nonspec])
+                elif self.witness_cache[0]:
                     return PMax([p_nonspec,DisjProb(js,c,oracle)])
                 else:
                     return p_nonspec
             else:
-                if self.witness_cache[0]:
+                if oracle_nonspec:
+                    return oracle_nonspec
+                elif self.witness_cache[0]:
+                    #print('js: ',show(js))
                     return DisjProb(js,c,oracle)
                 else:
                     return PConstraint(0,1)
@@ -227,6 +243,13 @@ class TypeClass(ttrtypes.TypeClass):
                     return DisjProb(js)
                 else:
                     return PConstraint(0,1)
+    def query_doublecond(self,c:'python list of types',oracle=None):
+        samples = self.sample()
+        for T in c:
+            for a in T.sample():
+                if not a in samples:
+                    samples.append(a)
+        return PExtreme([self.query(a,[(a,T) for T in c],oracle) for a in samples])
     def subtype_of(self,T):
         if ttracing('subtype_of'):
             print('subtype_of args: ',show([self,T]))
@@ -243,7 +266,7 @@ class TypeClass(ttrtypes.TypeClass):
     def sample(self,n=config.sample_size):
         wits = self.witness_cache[0]
         if len(wits)<=n:
-            return wits
+            return copy(wits)
         else:
             return list(np.random.choice(wits,n,False))
 
@@ -732,6 +755,12 @@ class PConstraint:
 def PMax(plist):
     return PConstraint(max(map(lambda p: p.min, plist)),
                        max(map(lambda p: p.max, plist)))
+def PExtreme(plist):
+    if plist:
+        return PConstraint(min(map(lambda p: p.min, plist)),
+                           max(map(lambda p: p.max, plist)))
+def PNeg(p):
+    return PConstraint(1-p.max,1-p.min)
 def PTimes(p1,p2):
     return PConstraint(p1.min*p2.min,p1.max*p2.max)
 def PDiv(p1,p2):
@@ -749,27 +778,65 @@ def PMinus(p1,p2):
 def PPlus(p1,p2):
     return PConstraint(p1.min+p2.min,p1.max+p2.max)
 def ConjProb(jlist,c=[],oracle=None):
+    if jlist:
+        res = None
+        for i in range(len(jlist)):
+            j = jlist[i]
+            if i:
+                res = PTimes(res,j[1].query(j[0],jlist[:i]+c,oracle))
+            else:
+                res = j[1].query(j[0],c,oracle)
+            #print('conjres: ',show(res))
+        return res
+    else:
+        return PConstraint(1)
+                
     # print(show(jlist))
     # print(show(c))
-    if ttracing('ConjProb'):
-        print('ConjProb args: ',show([jlist,c,oracle]))
-    if len(jlist) == 0:
-        return PConstraint(1)
-    elif len(jlist) == 1:
-        return jlist[0][1].query(jlist[0][0],c,oracle)
-    else:
-        j = jlist.pop()
-        return PTimes(j[1].query(j[0],jlist+c,oracle),
-                      ConjProb(jlist,c,oracle))
+    # if ttracing('ConjProb'):
+    #     print('ConjProb args: ',show([jlist,c,oracle]))
+    # if len(jlist) == 0:
+    #     return PConstraint(1)
+    # elif len(jlist) == 1:
+    #     return jlist[0][1].query(jlist[0][0],c,oracle)
+    # else:
+    #     j = jlist[-1]
+    #     if ttracing('ConjProb'):
+    #         print('ConjProb result: ', show(PTimes(j[1].query(j[0],jlist[:-1]+c,oracle),
+    #                   ConjProb(jlist[:-1],c,oracle))))
+    #     return PTimes(j[1].query(j[0],jlist[:-1]+c,oracle),
+    #                   ConjProb(jlist[:-1],c,oracle))
 def DisjProb(jlist,c=[],oracle=None):
-    if len(jlist) == 0:
-        return PConstraint(0)
-    elif len(jlist) == 1:
-        return jlist[0][1].query(jlist[0][0],c,oracle)
+    if jlist:
+        res = None
+        for i in range(len(jlist)):
+            #print(i)
+            j = jlist[i]
+            if i:
+                res = PMinus(PPlus(res,j[1].query(j[0],c,oracle)),
+                             PTimes(res,j[1].query(j[0],jlist[:i]+c,oracle)))
+            else:
+                res = j[1].query(j[0],c,oracle)
+            #print('res: ',show(res))
+        return res
     else:
-        j = jlist.pop()
-        return PMinus(PPlus(j[1].query(j[0]),DisjProb(jlist,c,oracle)),PTimes(j[1].query(j[0],jlist+c,oracle),
-                      ConjProb(jlist,c,oracle)))
+        return PConstraint(0)
+        
+    # if ttracing('DisjProb'):
+    #     print('DisjProb args: ',show([jlist,c,oracle]))
+    # if len(jlist) == 0:
+    #     return PConstraint(0)
+    # elif len(jlist) == 1:
+    #     return jlist[0][1].query(jlist[0][0],c,oracle)
+    # else:
+    #     j = jlist[-1]
+    #     if ttracing('DisjProb'):
+    #         print('j: ', show(j))
+    #         print('jlist+c: ',show(jlist[:-1]+c))
+    #         print('result: ', show(PMinus(PPlus(j[1].query(j[0],c,oracle),DisjProb(jlist[:-1],c,oracle)),PTimes(j[1].query(j[0],jlist[:-1]+c,oracle),
+    #                   ConjProb(jlist[:-1],c,oracle)))))
+    #     return PMinus(PPlus(j[1].query(j[0],c,oracle),DisjProb(jlist[:-1],c,oracle)),PTimes(j[1].query(j[0],jlist[:-1]+c,oracle),
+    #                   ConjProb(jlist[:-1],c,oracle)))
         
         
 

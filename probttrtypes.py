@@ -3,7 +3,7 @@ import inspect
 import config
 import ttrtypes
 from copy import deepcopy, copy
-from ttrtypes import HypObj, LazyObj, equal, Pred, add_to_model, _M, ComputeDepType, Fun
+from ttrtypes import HypObj, LazyObj, equal, Pred, add_to_model, _M, ComputeDepType, Fun, logtype, logtype_t
 from utils import show, showall, forsome, gensym, check_stack, apply123, ttracing
 from records import Rec
 
@@ -687,6 +687,25 @@ def QueryField(l,r,T,M):
 #             print('TResolved is: ', show((Obj,TResolved.in_poss(M))))
 #         return (Obj,TResolved.in_poss(M))
 #     #TResolved.in_poss(M).query(Obj)
+
+class NegType(TypeClass):
+    def __init__(self,T):
+        self.comps = Rec({'base_type':T})
+        self.witness_conditions = [lambda a,c,oracle: PNeg(self.comps.base_type.query(a,c,oracle))]
+    def learn_witness_condition(self,c):
+        logtype(self,c)
+    def learn_witness_type(self,c):
+        logtype_t(self,c)
+    def judge(self,a,n=1,max=None):
+        return self.comps.base_type.judge(a,1-max,1-n)
+    def judge_nonspec(self,n=1,max=None):
+        return self.comps.base_type.judge_nonspec(1-max,1-n)
+    def query(self,a,c=[],oracle=None):
+        return PNeg(self.comps.base_type.query(a,c,oracle))
+    def query_nonspec(self,c=[],oracle=None):
+        return PNeg(self.comps.base_type.query_nonspec(c,oracle))
+    def query_doublecond(self,c:'python list of types',oracle=None):
+        return PNeg(self.comps.base_type.query_doublecond(c,oracle))
 #--------------------
 # Probability classes
 #--------------------

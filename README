@@ -176,8 +176,10 @@ notebook probttr.ipynb.
 
 Corrected an error in the computation of conjoint and disjoint probabilities.
 
-Added "double-stroke" probabilities.  See the notebook probttr.ipynb
+Added "double-stroke" probabilities.  See the notebook probttr.ipynb.
 
 
+8 June 2021
 
+Added negation to probttr.  See the notebook probttr.ipynb.
 

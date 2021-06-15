@@ -41,3 +41,4 @@ auto/probttr.el
 *.out
 probttr.synctex.gz
 *.py#
+.ipynb_checkpoints/probttrbayes-checkpoint.ipynb

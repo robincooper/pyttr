@@ -142,8 +142,8 @@ class TypeClass(ttrtypes.TypeClass):
             #print(show(self),show(self.witness_cache))
             return self.witness_cache[1][self.witness_cache[0].index(a)]
     def _query_hypobj(self,a,c,oracle):
-        if isinstance(a,HypObj) and (next(map(lambda T: equal(T,self), a.types),None) or
-                                     next(map(lambda T: next(map(lambda T1: equal(T1,self),
+        if isinstance(a,HypObj) and (next(filter(lambda T: equal(T,self), a.types),None) or
+                                     next(filter(lambda T: next(filter(lambda T1: equal(T1,self),
                                                                  T.supertype_cache),None),
                                               a.types),None)):
             return PConstraint(1)
@@ -708,8 +708,8 @@ class NegType(TypeClass):
         return PNeg(self.comps.base_type.query_doublecond(c,oracle))
 
 class VarType(TypeClass):
-    def __init__(self,Ts:'list of types'):
-        self.comps = Rec({'value_types':Ts})
+    def __init__(self,types:'list of types',name=''):
+        super().__init__(name,{'value_types':types})
     def learn_witness_condition(self,c):
         logtype(self,c)
     def learn_witness_type(self,c):
@@ -732,6 +732,9 @@ class VarType(TypeClass):
                return PConstraint(0)
            else:
                return PConstraint(0,1)
+    
+        
+    
         
         
 #--------------------

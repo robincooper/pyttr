@@ -724,15 +724,41 @@ class VarType(TypeClass):
         return PSum([self.query_v(a,T,c,oracle) for T in self.comps.value_types])
     def query_v(self,a,T,c=[],oracle=None):
         if T in self.comps.value_types:
-            denominator = PSum([A.query(a,c,oracle) for A in self.comps.value_types])
-            return PDiv(T.query(a,c,oracle),denominator)
+            if [A for (a,A) in c if list(filter(lambda B: not self.subtype_of(B) and A.subtype_of(B),self.comps.value_types))]:
+                return PConstraint(0)
+            else:
+                denominator = PSum([A.query(a,c,oracle) for A in self.comps.value_types])
+                return PDiv(T.query(a,c,oracle),denominator)
         else:
            supertypes = map(lambda T1 : T.subtype_of(T1), self.comps.value_types) 
            if any(supertypes)  and any(supertypes):
                return PConstraint(0)
            else:
                return PConstraint(0,1)
-    
+    def query_nonspec(self,c=[],oracle=None):
+        return PSum([self.query_nonspec_v(T,c,oracle) for T in self.comps.value_types])
+    def query_nonspec_v(self,T,c=[],oracle=None):
+        if T in self.comps.value_types:
+            denominator = PSum([A.query_nonspec(c,oracle) for A in self.comps.value_types])
+            return PDiv(T.query_nonspec(c,oracle),denominator)
+        else:
+           supertypes = map(lambda T1 : T.subtype_of(T1), self.comps.value_types) 
+           if any(supertypes)  and any(supertypes):
+               return PConstraint(0)
+           else:
+               return PConstraint(0,1)
+    def query_doublecond(self,c:'python list of types',oracle=None):
+        return PSum([self.query_doublecond_v(T,c,oracle) for T in self.comps.value_types])
+    def query_doublecond_v(self,T,c=[],oracle=None):
+        if T in self.comps.value_types:
+            denominator = PSum([A.query_doublecond(c,oracle) for A in self.comps.value_types])
+            return PDiv(T.query_doublecond(c,oracle),denominator)
+        else:
+           supertypes = map(lambda T1 : T.subtype_of(T1), self.comps.value_types) 
+           if any(supertypes)  and any(supertypes):
+               return PConstraint(0)
+           else:
+               return PConstraint(0,1)
         
     
         

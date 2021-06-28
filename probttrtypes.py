@@ -724,7 +724,7 @@ class VarType(TypeClass):
         return PSum([self.query_v(a,T,c,oracle) for T in self.comps.value_types])
     def query_v(self,a,T,c=[],oracle=None):
         if T in self.comps.value_types:
-            if [A for (a,A) in c if list(filter(lambda B: not self.subtype_of(B) and A.subtype_of(B),self.comps.value_types))]:
+            if [A for (a,A) in c if list(filter(lambda B: A.subtype_of(B) and not equal(A,B),self.comps.value_types))]: #not self.subtype_of(B) and 
                 return PConstraint(0)
             else:
                 denominator = PSum([A.query(a,c,oracle) for A in self.comps.value_types])

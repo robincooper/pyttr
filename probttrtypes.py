@@ -721,20 +721,34 @@ class VarType(TypeClass):
         if ttracing('judge_nonspec'):
             print(show(self)+' is a variable type and cannot be judged')
     def query(self,a,c=[],oracle=None):
-        return PSum([self.query_v(a,T,c,oracle) for T in self.comps.value_types])
-    def query_v(self,a,T,c=[],oracle=None):
-        if T in self.comps.value_types:
-            if [A for (a,A) in c if list(filter(lambda B: A.subtype_of(B) and not equal(A,B),self.comps.value_types))]: #not self.subtype_of(B) and 
-                return PConstraint(0)
-            else:
-                denominator = PSum([A.query(a,c,oracle) for A in self.comps.value_types])
-                return PDiv(T.query(a,c,oracle),denominator)
+        Ts = [A for (a,A) in c if [B for B in self.comps.value_types if A.subtype_of(B)]]
+        if len(Ts) == 1:
+            return PConstraint(1)
+        elif len(Ts)>1:
+            return PConstraint(0)
         else:
-           supertypes = map(lambda T1 : T.subtype_of(T1), self.comps.value_types) 
-           if any(supertypes)  and any(supertypes):
-               return PConstraint(0)
-           else:
-               return PConstraint(0,1)
+            return PSum([self.query_v(a,T,c,oracle) for T in self.comps.value_types])
+    def query_v(self,a,T,c=[],oracle=None):
+        Ts = [A for (a,A) in c if [B for B in self.comps.value_types if A.subtype_of(B)]]
+        if len(Ts) == 1 and T.subtype_of(Ts[0]):
+            return PConstraint(1)
+        elif Ts:
+            return PConstraint(0)
+        # if [A for A in self.comps.value_types if equal(A,T)]: # T in self.comps.value_types 
+        #     if [A for (a,A) in c if list(filter(lambda B: A.subtype_of(B) and not equal(B,T),self.comps.value_types))]: #not self.subtype_of(B) and 
+        #         return PConstraint(0)
+        elif len([A for A in self.comps.value_types if T.subtype_of(A)])>1:
+            return PConstraint(0)
+        else:
+            #print(show([A.query(a,c,oracle) for A in self.comps.value_types]))
+            denominator = PSum([A.query(a,c,oracle) for A in self.comps.value_types])
+            return PDiv(T.query(a,c,oracle),denominator)
+        # else:
+        #    supertypes = map(lambda T1 : T.subtype_of(T1), self.comps.value_types) 
+        #    if any(supertypes)  and any(supertypes):
+        #        return PConstraint(0)
+        #    else:
+        #        return PConstraint(0,1)
     def query_nonspec(self,c=[],oracle=None):
         return PSum([self.query_nonspec_v(T,c,oracle) for T in self.comps.value_types])
     def query_nonspec_v(self,T,c=[],oracle=None):

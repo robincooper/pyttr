@@ -732,7 +732,9 @@ class VarType(TypeClass):
         Ts = [A for (a,A) in c if [B for B in self.comps.value_types if A.subtype_of(B)]]
         if len(Ts) == 1 and T.subtype_of(Ts[0]):
             return PConstraint(1)
-        elif Ts:
+        elif len(Ts)>1:
+            return None
+        elif [A for A in self.comps.value_types if T.subtype_of(A)] and [A for A in Ts if not T.subtype_of(A)]:
             return PConstraint(0)
         # if [A for A in self.comps.value_types if equal(A,T)]: # T in self.comps.value_types 
         #     if [A for (a,A) in c if list(filter(lambda B: A.subtype_of(B) and not equal(B,T),self.comps.value_types))]: #not self.subtype_of(B) and 

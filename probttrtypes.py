@@ -728,6 +728,12 @@ class VarType(TypeClass):
             return PConstraint(0)
         else:
             return PSum([self.query_v(a,T,c,oracle) for T in self.comps.value_types])
+    def query_normal(self,a):
+        sum = PSum([T.query(a) for T in self.comps.value_types])
+        if sum.min == 1 and sum.max == 1:
+            return True
+        else:
+            return False
     def query_v(self,a,T,c=[],oracle=None):
         Ts = [A for (a,A) in c if [B for B in self.comps.value_types if A.subtype_of(B)]]
         if len(Ts) == 1 and T.subtype_of(Ts[0]):

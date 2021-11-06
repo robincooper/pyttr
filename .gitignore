@@ -42,3 +42,5 @@ auto/probttr.el
 probttr.synctex.gz
 *.py#
 .ipynb_checkpoints/probttrbayes-checkpoint.ipynb
+.ipynb_checkpoints/probttr-overview-aics2021-checkpoint.ipynb
+.ipynb_checkpoints/ttr-overview-aics2021-checkpoint.ipynb

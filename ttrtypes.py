@@ -1,4 +1,4 @@
-from copy import deepcopy
+from copy import copy
 from collections import deque
 #from types import MethodType
 from utils import gensym, some_condition, forall, forsome, substitute, show, to_latex, showall, ttracing, check_stack
@@ -32,15 +32,15 @@ def add_to_model(T,m=_M):
     key = T.show()
     if key in m.model:
         return m.model[key]
-    elif 'validate' in dir(T) :
-        if T.validate():
-            m.model[key] = T
-            T.poss = m
-        return T
+    # elif 'validate' in dir(T) and T.validate():
+    #     m.model[key] = deepcopy(T)
+    #     m.model[key].poss = m
+    #     return  m.model[key]
     else:
-       m.model[key] = T
-       T.poss = m
-       return T 
+        # m.model[key] = copy(T)
+        # m.model[key].poss = m
+        T.in_poss(m)
+        return m.model[key] 
         
         
 
@@ -61,20 +61,42 @@ class TypeClass:
         self.witness_conditions = []
         self.witness_types = []
         self.poss = _M
+    # def in_poss(self,poss):
+    #     key = self.show()
+    #     if poss == _M:
+    #         return self
+    #     elif key not in poss.model:
+    #         poss.model[key] = deepcopy(self)
+    #         poss.model[key].poss = poss
+    #     else:
+    #         old = poss.model[key]
+    #         old.witness_cache.extend([x for x in self.witness_cache if x not in old.witness_cache])
+    #         old.supertype_cache.extend([x for x in self.supertype_cache if x not in old.supertype_cache])
+    #         old.witness_conditions.extend([x for x in self.witness_conditions if x not in old.witness_conditions])
+    #         old.witness_types.extend([x for x in self.witness_types if x not in old.witness_types])
+    #     return poss.model[key]
     def in_poss(self,poss):
         key = self.show()
         if poss == _M:
+            poss.model[key] = self
             return self
         elif key not in poss.model:
-            poss.model[key] = deepcopy(self)
-            poss.model[key].poss = poss
+            new = copy(self)
+            new.poss = poss
+            new.witness_cache = copy(new.witness_cache)
+            new.supertype_cache = copy(new.supertype_cache)
+            new.witness_conditions = copy(new.witness_conditions)
+            new.witness_types = copy(new.witness_types)
+            poss.model[key] = new
+            return new
         else:
-            old = poss.model[key]
-            old.witness_cache.extend([x for x in self.witness_cache if x not in old.witness_cache])
-            old.supertype_cache.extend([x for x in self.supertype_cache if x not in old.supertype_cache])
-            old.witness_conditions.extend([x for x in self.witness_conditions if x not in old.witness_conditions])
-            old.witness_types.extend([x for x in self.witness_types if x not in old.witness_types])
-        return poss.model[key]
+            new = poss.model[key]
+            new.witness_cache = new.witness_cache + [x for x in self.witness_cache if x not in new.witness_cache]
+            new.supertype_cache = new.supertype_cache + [x for x in self.supertype_cache if x not in new.supertype_cache]
+            new.witness_conditions = new.witness_conditions + [x for x in self.witness_conditions if x not in new.witness_conditions]
+            new.witness_types = new.witness_types + [x for x in self.witness_types if x not in new.witness_types]
+            return new
+    
     def show(self):
         return self.name
     def to_latex(self,vars):
@@ -201,7 +223,7 @@ class PTypeClass(TypeClass):
         self.supertype_cache = []
         self.witness_conditions = []
         self.witness_types = []
-        self.poss = ''
+        self.poss = _M
     def show(self):
         return self.comps.pred.name+'('+', '.join([show(x) for x in self.comps.args])+')'
     def to_latex(self,vars):

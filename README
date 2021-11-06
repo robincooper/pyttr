@@ -183,3 +183,11 @@ Added "double-stroke" probabilities.  See the notebook probttr.ipynb.
 
 Added negation to probttr.  See the notebook probttr.ipynb.
 
+
+6 Nov 2021
+
+Added ttr-overview-aics2021.ipynb and probttr-overview-aics2021.ipynb
+
+Corrected a problem in the treatment of possibilities
+
+Modified probttr.ipynb to eliminate warnings

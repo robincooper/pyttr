@@ -4,7 +4,7 @@ import config
 import ttrtypes
 from copy import deepcopy, copy
 from ttrtypes import HypObj, LazyObj, equal, Pred, add_to_model, _M, ComputeDepType, Fun, logtype, logtype_t
-from utils import show, showall, forsome, gensym, check_stack, apply123, ttracing
+from utils import show, showall, forsome, gensym, check_stack, apply123, ttracing, substitute
 from records import Rec
 
 
@@ -306,8 +306,17 @@ class PTypeClass(TypeClass):
             return True
         else: return False
     create = ttrtypes.PTypeClass.create
-    subst = ttrtypes.PTypeClass.subst
     eval = ttrtypes.PTypeClass.eval
+    def subst(self,v,a):
+        if self == v:
+            return a
+        else:
+            newargs = []
+            for arg in self.comps.args:
+                if arg == v: newargs.append(a)
+                elif isinstance(arg,str): newargs.append(arg)
+                else: newargs.append(substitute(arg,v,a))      #arg.subst(v,a))
+            return PType(self.comps.pred,newargs).in_poss(self.poss)
     def _query_witness_conditions(self,a,c,oracle):
         if self.witness_conditions or self.comps.pred.witness_funs:
             condps = []

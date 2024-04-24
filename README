@@ -191,3 +191,7 @@ Added ttr-overview-aics2021.ipynb and probttr-overview-aics2021.ipynb
 Corrected a problem in the treatment of possibilities
 
 Modified probttr.ipynb to eliminate warnings
+
+
+24 Apr 2024
+Fixed a bug in probttrtypes.py pointed out by Bill Noble

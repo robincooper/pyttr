@@ -4,7 +4,7 @@ import config
 import ttrtypes
 from copy import deepcopy, copy
 from ttrtypes import HypObj, LazyObj, equal, Pred, add_to_model, _M, ComputeDepType, Fun, logtype, logtype_t
-from utils import show, showall, forsome, gensym, check_stack, apply123, ttracing
+from utils import show, showall, forsome, gensym, check_stack, apply123, ttracing, substitute
 from records import Rec
 
 
@@ -306,7 +306,17 @@ class PTypeClass(TypeClass):
             return True
         else: return False
     create = ttrtypes.PTypeClass.create
-    subst = ttrtypes.PTypeClass.subst
+    def subst(self,v,a):
+        if self == v:
+            return a
+        else:
+            newargs = []
+            for arg in self.comps.args:
+                if arg == v: newargs.append(a)
+                elif isinstance(arg,str): newargs.append(arg)
+                else: newargs.append(substitute(arg,v,a))      #arg.subst(v,a))
+            return PType(self.comps.pred,newargs).in_poss(self.poss)
+        #subst needs to be defined so that probttrtypes.PType is used rather than ttrtypes.PType (Bill Noble pull request, 7 Mar 2022)
     eval = ttrtypes.PTypeClass.eval
     def _query_witness_conditions(self,a,c,oracle):
         if self.witness_conditions or self.comps.pred.witness_funs:
@@ -651,7 +661,7 @@ def RecOfRecType(r,T,M,c,oracle):
         if forsome(TypeLabels, lambda l: l not in RecordLabels):
             return PConstraint(0)
         else:
-            #print(show(ConjProb(list(map(lambda l: QueryField(l,r,T,M),TypeLabels)),c,oracle)))
+            #print(show(list(map(lambda l: QueryField(l,r,T,M),TypeLabels))))
             return ConjProb(list(map(lambda l: QueryField(l,r,T,M),TypeLabels)),c,oracle)
         # elif forall(TypeLabels, lambda l: l in RecordLabels and QueryField(l,r,T,M)):
         #     return True
@@ -663,16 +673,16 @@ def QueryField(l,r,T,M):
     TInField = T.comps.__getattribute__(l)
     Obj = r.__getattribute__(l)
     # if isinstance(Obj,HypObj):
-    #     M = _M
+    #    M = _M
     if isinstance(TInField, TypeClass):
         return (Obj,TInField.in_poss(M))
-    #TInField.in_poss(M).query(Obj) 
+        #print(show(TInField.in_poss(M).query(Obj))) 
     else:
         TResolved = ComputeDepType(r,TInField,M)
         if ttracing('TResolved'):
             print('TResolved is: ', show((Obj,TResolved.in_poss(M))))
         return (Obj,TResolved.in_poss(M))
-    #TResolved.in_poss(M).query(Obj)
+        #print(show(TResolved.in_poss(M).query(Obj)))
 
 # def QueryField_nonspec(l,T,M):
 #     if ttracing('QueryField'):

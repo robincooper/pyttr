@@ -227,7 +227,7 @@ class PTypeClass(TypeClass):
     def show(self):
         return self.comps.pred.name+'('+', '.join([show(x) for x in self.comps.args])+')'
     def to_latex(self,vars):
-        return '\\text{'+self.comps.pred.name+'}'+'('+', '.join([to_latex(x,vars) for x in self.comps.args])+')'
+        return to_latex(self.comps.pred,vars)+'('+', '.join([to_latex(x,vars) for x in self.comps.args])+')'
     def validate(self):
         if isinstance(self.comps.pred,Pred) \
                 and len(self.comps.args) == len(self.comps.pred.arity):
@@ -317,7 +317,7 @@ class MeetType(TypeClass):
     def show(self):
         return '('+ self.comps.left.show()+'&'+self.comps.right.show()+')'
     def to_latex(self,vars):
-        return '\\left(\\begin{array}{rcl}\n'+ self.comps.left.to_latex(vars)+'\land'+self.comps.right.to_latex(vars)+'\n\\end{array}\\right)'
+        return '\\left(\\begin{array}{rcl}\n'+ self.comps.left.to_latex(vars)+'\\wedge'+self.comps.right.to_latex(vars)+'\n\\end{array}\\right)'
     def learn_witness_condition(self,c):
         if ttracing('learn_witness_condition'):
             print('Meet types are logical and cannot learn new conditions')
@@ -830,7 +830,7 @@ class TTRStringType(TypeClass):
         return '^'.join([show(i) for i in self.comps.types])
     def to_latex(self,vars):
         # TODO
-        return '⁀'.join([to_latex(i,vars) for i in self.comps.types])
+        return '^\\frown'.join([to_latex(i,vars) for i in self.comps.types])
     def validate(self):
         return forall(self.comps.types, lambda T: isinstance(T,TypeClass))
     def learn_witness_condition(self,c):
@@ -982,7 +982,7 @@ class Pred:
     def show(self):
         return self.name
     def to_latex(self,vars):
-        return to_latex(self.name,vars)#.replace('_', '\\_')
+        return to_latex(self.name.replace('_', '-'),vars)
     def learn_witness_fun(self,f):
         if f not in self.witness_funs:
             self.witness_funs.append(f)
@@ -1188,7 +1188,7 @@ class TTRString(object):
     def show(self):
         return '"'+' '.join([show(i) for i in self.items])+'"'
     def to_latex(self,vars):
-        return '\ '.join([to_latex(i,vars) for i in self.items])
+        return '\\ '.join([to_latex(i,vars) for i in self.items])
 
 #============================
 

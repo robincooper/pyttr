@@ -195,3 +195,6 @@ Modified probttr.ipynb to eliminate warnings
 
 24 Apr 2024
 Fixed a bug in probttrtypes.py pointed out by Bill Noble
+
+26 Apr 2026
+Fixed bugs in neurons.py and nu.py with a merge from Kaj Ailomaa assisted by Codex

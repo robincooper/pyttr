@@ -239,7 +239,7 @@ class Network(object):
         for i in neurons:
             n = self.neurons[i]
             n.excite('notick',np.array([0]*len(n.state.dendrites)))
-        if self.ntracing() and time is 'tick':
+        if self.ntracing() and time == 'tick':
             self.ntrace()
     def fire(self,neurons=None):
         if neurons is None:
@@ -301,7 +301,8 @@ class Network(object):
             return True
         elif len(apat.neurons)>len(h):
             return False
-        elif all(h[0][apat.neurons[0]] == apat.vals[0]):
+        elif all(h[0][np.asarray(apat.neurons[0], dtype='int64')] ==
+                 np.asarray(apat.vals[0], dtype='int64')):
             return self.match_apat(ActivityPattern(list(apat.neurons[1:]),list(apat.vals[1:])),h[1:])
         else:
             return self.match_apat(apat,h[1:])
@@ -341,12 +342,16 @@ class ActivityPattern(object):
     positions of the indices argument. Default is 1 for each neuron
     mentioned in indices at each tick."""
     def __init__(self,indices,vals=None):
-        self.neurons = np.array([np.array(i) for i in indices])
+        self.neurons = np.array([np.array(i, dtype='int64') for i in indices],
+                                dtype=object)
         if vals is None:
-            self.vals = np.array([np.array([1]*len(self.neurons[i]))
-                                  for i in range(len(self.neurons))])
+            self.vals = np.array([np.array([1]*len(self.neurons[i]),
+                                           dtype='int64')
+                                  for i in range(len(self.neurons))],
+                                 dtype=object)
         else:
-            self.vals = np.array([np.array(i) for i in vals])
+            self.vals = np.array([np.array(i, dtype='int64') for i in vals],
+                                 dtype=object)
     def empty(self):
         return list(self.neurons)==[]
     def compact(self):
@@ -363,7 +368,7 @@ class ActivityPattern(object):
             return (ns,vs)
         for i,j in zip(self.neurons,self.vals):
             new_line = compact_line(list(i),list(j))
-            if new_neurons is []:
+            if new_neurons == []:
                 new_neurons = [new_line[0]]
                 new_vals = [new_line[1]]
             else:
@@ -393,7 +398,7 @@ class ActivityPattern(object):
     def subapat_of(self,apat):
         if len(self.neurons) > len(apat.neurons):
             return False
-        elif len(self.neurons) is 0:
+        elif len(self.neurons) == 0:
             return True
         elif all(i in [x for x in zip(apat.neurons[0],apat.vals[0])]
                  for i in [x for x in zip(self.neurons[0],self.vals[0])]):

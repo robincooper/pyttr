@@ -143,13 +143,13 @@ class InhibitType_n(Type_n):
         # else:
         #     return ActivityPattern([])
 
-class BType(ttr.BTypeClass,Type):
+class BType(Type,ttr.BTypeClass):
     def __init__(self,name=gensym('BT'),nu=None):
         ttr.BTypeClass.__init__(self,name)
         self.fixed_nu = nu
         
 
-class PType(ttr.PTypeClass,Type):
+class PType(Type,ttr.PTypeClass):
     def __init__(self,pred,args,nu=None):
         ttr.PTypeClass.__init__(self,pred,args)
         self.fixed_nu = nu
@@ -205,7 +205,7 @@ class PType(ttr.PTypeClass,Type):
 #     else:
 #         return arg.nu
     
-class PType_n(ttr.PTypeClass,Type_n):
+class PType_n(Type_n,ttr.PTypeClass):
     def __init__(self,pred,args,assgn):
         ttr.PTypeClass.__init__(self,pred,args)
         self.to_inhibit = []
@@ -269,7 +269,7 @@ def hashable(obj):
     except TypeError:
         return False
 
-class MeetType(ttr.MeetType,Type):
+class MeetType(Type,ttr.MeetType):
     def __init__(self,T1,T2,nu=None):
         ttr.MeetType.__init__(self,T1,T2)
         self.fixed_nu = nu
@@ -286,7 +286,7 @@ class MeetType(ttr.MeetType,Type):
         else:
             return MeetType(self.comps.left.subst(v,a),self.comps.right.subst(v,a))
 
-class JoinType(ttr.JoinType,Type):
+class JoinType(Type,ttr.JoinType):
     def __init__(self,T1,T2,nu=None):
         ttr.JoinType.__init__(self,T1,T2)
         self.fixed_nu = nu
@@ -308,7 +308,7 @@ class JoinType(ttr.JoinType,Type):
         else:
             return JoinType(self.comps.left.subst(v,a),self.comps.right.subst(v,a))
 
-class MeetType_n(ttr.MeetType,Type_n):
+class MeetType_n(Type_n,ttr.MeetType):
     def __init__(self,T1,T2,assgn):
         ttr.MeetType.__init__(self,T1,T2)
         self.to_inhibit = T1.to_inhibit+T2.to_inhibit
@@ -327,7 +327,7 @@ class MeetType_n(ttr.MeetType,Type_n):
     def add_grandmother(self,network):
         print(show(self)+' is a logical type and cannot add grandmothers.')
 
-class FunType(ttr.FunType,Type):
+class FunType(Type,ttr.FunType):
     def __init__(self,T1,T2):
         ttr.FunType.__init__(self,T1,T2)
     def subst(self,v,a):
@@ -335,7 +335,7 @@ class FunType(ttr.FunType,Type):
             return a
         else: return FunType(self.comps.domain.subst(v,a),self.comps.range.subst(v,a))
 
-class RecType(ttr.RecType,Type):
+class RecType(Type,ttr.RecType):
     def __init__(self,d={}):
         ttr.RecType.__init__(self,d)
         self.comps = Rec(d)
@@ -355,7 +355,7 @@ class RecType(ttr.RecType,Type):
         res.comps = self.comps.subst(v,a)
         return res
 
-class RecType_n(ttr.RecType,Type_n):
+class RecType_n(Type_n,ttr.RecType):
     def __init__(self,d={},assgn=None):
         ttr.RecType.__init__(self,d)
         self.comps = Rec(d)
@@ -390,7 +390,7 @@ class RecType_n(ttr.RecType,Type_n):
 
     
 
-class StringType_n(ttr.TTRStringType,Type_n):
+class StringType_n(Type_n,ttr.TTRStringType):
     def __init__(self,list,assgn):
         ttr.TTRStringType.__init__(self,list)
         self.to_inhibit = []
@@ -476,7 +476,7 @@ class DepType(ttr.Fun):
             else:
                 return res
 
-class DepType_n(ttr.Fun,Type_n):
+class DepType_n(Type_n,ttr.Fun):
     def __init__(self,v,dom,body,assgn=None):
         ttr.Fun.__init__(self,v,dom,body)
         self.to_inhibit = []

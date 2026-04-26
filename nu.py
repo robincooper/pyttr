@@ -63,9 +63,9 @@ def nu(a,assgn=None):
 
 #####################################
 
-class Type(ttr.Type):
+class Type(ttr.TypeClass):
     def __init__(self,name='',cs={},nu=None):
-        ttr.Type.__init__(self,name,cs)
+        ttr.TypeClass.__init__(self,name,cs)
         self.fixed_nu = nu
     def nu(self,assgn):
         # if self.fixed_nu is None:
@@ -78,9 +78,9 @@ class Type(ttr.Type):
     def aus_prop(self,obj):
         return(Rec({'l_type':self,'l_obj':obj}))
 
-class Type_n(ttr.Type):
+class Type_n(ttr.TypeClass):
     def __init__(self,name='',cs={},assgn=None):
-        ttr.Type.__init__(self,name,cs)
+        ttr.TypeClass.__init__(self,name,cs)
         self.apats = {}
         self.to_inhibit = [self]
         self.assgn = assgn
@@ -143,15 +143,15 @@ class InhibitType_n(Type_n):
         # else:
         #     return ActivityPattern([])
 
-class BType(Type,ttr.BType):
+class BType(Type,ttr.BTypeClass):
     def __init__(self,name=gensym('BT'),nu=None):
-        ttr.BType.__init__(self,name)
+        ttr.BTypeClass.__init__(self,name)
         self.fixed_nu = nu
         
 
-class PType(Type,ttr.PType):
+class PType(Type,ttr.PTypeClass):
     def __init__(self,pred,args,nu=None):
-        ttr.PType.__init__(self,pred,args)
+        ttr.PTypeClass.__init__(self,pred,args)
         self.fixed_nu = nu
     def nu(self,assgn):
         if self.fixed_nu is None:
@@ -205,9 +205,9 @@ class PType(Type,ttr.PType):
 #     else:
 #         return arg.nu
     
-class PType_n(Type_n,ttr.PType):
+class PType_n(Type_n,ttr.PTypeClass):
     def __init__(self,pred,args,assgn):
-        ttr.PType.__init__(self,pred,args)
+        ttr.PTypeClass.__init__(self,pred,args)
         self.to_inhibit = []
         self.assgn = assgn
     def add_apat(self,network,apat):
@@ -246,7 +246,7 @@ def mkntype_ptype(pred,args,io,assgn,gsym,network):
     types = []
     types.append(MeetType_n(T_ptype,T_relpred,assgn))
     for i in range(len(argtypes)):
-        if i is 0:
+        if i == 0:
             types.append(MeetType_n(InhibitType_n(T_relpred),argtypesargs[0],assgn))
         else:
             types.append(MeetType_n(InhibitType_n(argtypesargs[i-1]),argtypesargs[i],assgn))
@@ -462,14 +462,17 @@ class DepType(ttr.Fun):
     def subst(self,v,a):
         if self == v:
             return a
-        else: return DepType(self.comps.domain.subst(v,a),self.comps.range.subst(v,a))
-    def app_recursive(self,list):
-        if list is []:
+        else:
+            return DepType(self.var,
+                           substitute(self.domain_type,v,a),
+                           substitute(self.body,v,a))
+    def app_recursive(self,args):
+        if args == []:
             return self
         else:
-            res = self.app(list[0])
+            res = self.app(args[0])
             if isinstance(res,DepType):
-                return res.app_recursive(list[1:])
+                return res.app_recursive(args[1:])
             else:
                 return res
 
@@ -544,7 +547,7 @@ class Rec_n(Type_n,rec.Rec):
         self.to_inhibit = []
         self.assgn = assgn
     def show(self):
-        rec.Rec.show(self)
+        return self.rec.show()
     def getapat(self,network,gsym=gensym_n,io=iota):
         if self.assgn is None:
             self.assgn = {'in_use':[]}

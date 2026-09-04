@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools >= 77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyttr2"
+version = "0.1.0"
+description = "A cleaned-up Python implementation of Type Theory with Records."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "ipython",
+  "numpy",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+]
+notebooks = [
+  "ipykernel",
+  "jupyterlab",
+]
+
+[tool.setuptools]
+py-modules = [
+  "config",
+  "probttrtypes",
+  "records",
+  "ttrtypes",
+  "utils",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

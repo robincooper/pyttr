@@ -1,9 +1,10 @@
 # pyttr2
 
 `pyttr2` is a cleanup branch of the Python implementation of Type Theory with
-Records (TTR). The current code preserves the flat module layout from `pyttr`
-while adding modern project metadata and regression tests so future refactors
-can be made with more confidence.
+Records (TTR). The core implementation now lives in the `pyttr` package under
+`src/`, with top-level compatibility modules kept so the older examples and
+notebooks can continue to import `ttrtypes`, `records`, `utils`, and related
+modules while the cleanup proceeds.
 
 ## Requirements
 
@@ -30,6 +31,14 @@ python -m unittest discover -s tests
 
 The test suite includes regression tests, the Python example scripts, and
 in-memory execution of the notebooks.
+
+## Layout
+
+- `src/pyttr/`: canonical package code
+- `tests/`: regression, example, and notebook execution tests
+- `example-*.py` and `*.ipynb`: existing example material
+- top-level `records.py`, `ttrtypes.py`, `probttrtypes.py`, `utils.py`, and
+  `config.py`: compatibility wrappers for legacy imports
 
 The first cleanup pass focuses on compatibility-safe modernization: packaging
 metadata, basic regression tests, mutable-default cleanup, and warning fixes.

@@ -3,6 +3,7 @@ from .utils import show,to_latex,ttracing,substitute
 
 class Rec:
     def __init__(self,d=None):
+        self.fields = {}
         if d is None:
             d = {}
         for item in d.items():
@@ -10,10 +11,48 @@ class Rec:
                 self.addfield(item[0], Rec(item[1]))
             else:
                 self.addfield(item[0], item[1])
+
+    def __getattr__(self, name):
+        try:
+            fields = object.__getattribute__(self, 'fields')
+        except AttributeError:
+            raise AttributeError(name) from None
+        if name in fields:
+            return fields[name]
+        raise AttributeError(name)
+
+    def __setattr__(self, name, value):
+        if name == 'fields':
+            object.__setattr__(self, name, value)
+        else:
+            try:
+                fields = object.__getattribute__(self, 'fields')
+            except AttributeError:
+                object.__setattr__(self, name, value)
+            else:
+                fields[name] = value
+
+    def __contains__(self, label):
+        return label in self.fields
+
+    def __iter__(self):
+        return iter(self.fields)
+
+    def __len__(self):
+        return len(self.fields)
+
+    def items(self):
+        return self.fields.items()
+
+    def keys(self):
+        return self.fields.keys()
+
+    def values(self):
+        return self.fields.values()
             
     def show(self):
         s = ""
-        for kvp in self.__dict__.items():           
+        for kvp in self.fields.items():
             if s == "":
                 s = s + kvp[0] + " = "
             else:
@@ -27,7 +66,7 @@ class Rec:
         
     def to_latex(self,vars):
         s = ""
-        for kvp in self.__dict__.items():           
+        for kvp in self.fields.items():
             if s == "":
                 s = s + to_latex(kvp[0]) + " &=& "
             else:
@@ -41,10 +80,10 @@ class Rec:
         return "\\left[\\begin{array}{rcl}\n"+s+"\n\\end{array}\\right]"
         
     def addfield(self, label, value):
-        if label in self.__dict__:
+        if label in self.fields:
             print("\"" +label + "\"" + " is already a label in " +show(self))
         else: 
-            setattr(self, label, value)
+            self.fields[label] = value
             return self
 
     def addpath(self, path, value):
@@ -54,8 +93,8 @@ class Rec:
     def addpathl(self, pathl, value):
         if len(pathl) == 1:
             return self.addfield(pathl[0],value)
-        elif pathl[0] in self.__dict__:
-            val = getattr(self, pathl[0])
+        elif pathl[0] in self.fields:
+            val = self.fields[pathl[0]]
             if isinstance(val, Rec):
                 val.addpathl(pathl[1:], value)
             else:
@@ -65,49 +104,41 @@ class Rec:
             self.addfield(pathl[0], Rec().addpathl(pathl[1:],value))
             return self
             
-    
-    # def pathvalue(self,path):
-    #     if len(path) == 1: 
-    #         return self.__getattribute__(str(path[0]))
-    #     else: 
-    #         return Rec.pathvalue(self.__getattribute__(path[0]), path[1:])
-            
     def pathvalue(self, path):
         splits=deque(path.split("."))
         if (len(splits) == 1):
-            if hasattr(self, splits[0]):
-                return getattr(self, splits[0])
+            if splits[0] in self.fields:
+                return self.fields[splits[0]]
             else:
                 if ttracing('pathvalue'):
                     print(splits[0]+' not a label in '+self.show())
                 return None
         else:
             addr = splits.popleft()
-            if not hasattr(self, addr):
+            if addr not in self.fields:
                 if ttracing('pathvalue'):
                     print('No attribute '+addr+' in '+show(self))
                 return None
-            elif not hasattr(getattr(self, addr), 'pathvalue'):
+            elif not hasattr(self.fields[addr], 'pathvalue'):
                 if ttracing('pathvalue'):
-                    print('No paths into '+show(getattr(self, addr)))
+                    print('No paths into '+show(self.fields[addr]))
                 return None
             else:
-                return getattr(self, addr).pathvalue(".".join(splits))
+                return self.fields[addr].pathvalue(".".join(splits))
     
     #Recursive for future use
     #Needs redefining so as not to be destructive?
     def relabel(self, oldlabel, newlabel):
-        newrec = Rec(self.__dict__)
-        if oldlabel in newrec.__dict__:
-            value = newrec.__dict__[oldlabel]
-            delattr(newrec, oldlabel)
-            setattr(newrec, newlabel, value)
+        newrec = Rec(self.fields)
+        if oldlabel in newrec.fields:
+            value = newrec.fields.pop(oldlabel)
+            newrec.fields[newlabel] = value
         return newrec
     
     def subst(self,v,a):
         res = Rec()
-        for l in self.__dict__.keys():
-            lval = getattr(self, l)
+        for l in self.fields:
+            lval = self.fields[l]
             if lval == v:
                 res.addfield(l,a)
             elif isinstance(lval,str):
@@ -117,38 +148,38 @@ class Rec:
         return res
 
     def eval(self):
-        for l in self.__dict__.keys():
-            lval = getattr(self, l)
+        for l in self.fields:
+            lval = self.fields[l]
             if hasattr(lval, 'eval'):
-                setattr(self, l,lval.eval())
+                self.fields[l] = lval.eval()
         return self
                 
     def flatten(self):
         res = Rec()
-        for l in self.__dict__.keys():
-            lval = getattr(self, l)
+        for l in self.fields:
+            lval = self.fields[l]
             if isinstance(lval,str):
                 res.addfield(l,lval)
             elif isinstance(lval,Rec):
                 rec1 = lval.flatten()
-                for l1 in rec1.__dict__.keys():
-                    res.addfield(l+"."+l1,getattr(rec1, l1))
+                for l1 in rec1.fields:
+                    res.addfield(l+"."+l1,rec1.fields[l1])
         return res
 
     def unflatten(self):
         res = Rec()
-        for l in self.__dict__.keys():
-            res.addpath(l, getattr(self, l))
+        for l in self.fields:
+            res.addpath(l, self.fields[l])
         return res
 
     def addrec(self,r):
         res = Rec()
-        for l in [l for l in self.__dict__ if not l in r.__dict__]:
-            res.addfield(l,getattr(self, l))
-        for l in [l for l in self.__dict__ if l in r.__dict__]:
-            rl = getattr(r, l)
+        for l in [l for l in self.fields if not l in r.fields]:
+            res.addfield(l,self.fields[l])
+        for l in [l for l in self.fields if l in r.fields]:
+            rl = r.fields[l]
             #print('rl: ',show(rl))
-            sl = getattr(self, l)
+            sl = self.fields[l]
             #print('sl: ',show(sl))
             if isinstance(rl, Rec) and isinstance(sl,Rec):
                 res1 = sl.addrec(rl)
@@ -161,8 +192,8 @@ class Rec:
                 res.addfield(l,rl)
             else:
                 return None
-        for l in [l for l in r.__dict__ if not l in self.__dict__]:
-            res.addfield(l,getattr(r, l))
+        for l in [l for l in r.fields if not l in self.fields]:
+            res.addfield(l,r.fields[l])
         return res
  
 

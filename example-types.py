@@ -1,9 +1,13 @@
 #sys.path.append('')
+from pathlib import Path
+import sys
 
-from ttrtypes import Type, BType, PType, Pred, MeetType, JoinType, ListType, \
+sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
+
+from pyttr.ttrtypes import Type, BType, PType, Pred, MeetType, JoinType, ListType, \
 SingletonType, HypObj, LazyObj, FunType, RecType, Fun, Ty, Re, RecTy, Possibility, AbsPath, TTRString, TTRStringType, KPlusStringType
-from records import Rec
-from utils import show, example, ttrace, nottrace, ttracing
+from pyttr.records import Rec
+from pyttr.utils import show, example, ttrace, nottrace, ttracing
 
 Ind = BType('Ind')
 
@@ -1088,5 +1092,4 @@ T1 = TTRStringType([RecType({'x' : Ind}), RecType({'x' : Ind})])
 T2 = KPlusStringType(Ty)
 print(show(T1.merge(T2)))
 print(show(T1.amerge(T2)))
-
 

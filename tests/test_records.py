@@ -1,7 +1,15 @@
+import sys
 import unittest
+from pathlib import Path
 
-from records import Rec
-from utils import show
+
+ROOT = Path(__file__).resolve().parents[1]
+SRC = ROOT / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
+
+from pyttr.records import Rec
+from pyttr.utils import show
 
 
 class RecTests(unittest.TestCase):
@@ -29,6 +37,20 @@ class RecTests(unittest.TestCase):
 
         self.assertEqual(show(rec), "{f = a, g = b}")
         self.assertEqual(show(relabeled), "{g = b, z = a}")
+
+    def test_fields_are_not_stored_directly_on_instance_dict(self):
+        rec = Rec({"x": "a"})
+
+        self.assertEqual(rec.__dict__, {"fields": {"x": "a"}})
+        self.assertEqual(rec.fields["x"], "a")
+        self.assertEqual(rec.x, "a")
+
+    def test_label_can_match_method_name(self):
+        rec = Rec({"show": "label-value"})
+
+        self.assertEqual(rec.pathvalue("show"), "label-value")
+        self.assertTrue(callable(rec.show))
+        self.assertEqual(show(rec), "{show = label-value}")
 
 
 if __name__ == "__main__":

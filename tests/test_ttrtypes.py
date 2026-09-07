@@ -1,6 +1,14 @@
+import sys
 import unittest
+from pathlib import Path
 
-import ttrtypes as ttr
+
+ROOT = Path(__file__).resolve().parents[1]
+SRC = ROOT / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
+
+from pyttr import ttrtypes as ttr
 
 
 class TypeTests(unittest.TestCase):

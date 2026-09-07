@@ -40,5 +40,10 @@ in-memory execution of the notebooks.
 - top-level `records.py`, `ttrtypes.py`, `probttrtypes.py`, `utils.py`, and
   `config.py`: compatibility wrappers for legacy imports
 
+`Rec` values store user labels in the `fields` mapping. Attribute access such
+as `record.x` is still supported for compatibility, but labels no longer live
+directly in the instance `__dict__`, so they cannot overwrite methods like
+`show()` or `pathvalue()`.
+
 The first cleanup pass focuses on compatibility-safe modernization: packaging
 metadata, basic regression tests, mutable-default cleanup, and warning fixes.

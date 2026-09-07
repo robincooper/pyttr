@@ -527,7 +527,7 @@ class RecType(TypeClass):
         return self
     def show(self):
         s = ""
-        for kvp in self.comps.__dict__.items():           
+        for kvp in self.comps.fields.items():
             if s == "":
                 s = s + kvp[0] + " : "
             else:
@@ -541,7 +541,7 @@ class RecType(TypeClass):
     
     def to_latex(self,vars):
         s = ""
-        for kvp in self.comps.__dict__.items():           
+        for kvp in self.comps.fields.items():
             if s == "":
                 s = s + to_latex(kvp[0]) + " &:& "
             else:
@@ -554,45 +554,38 @@ class RecType(TypeClass):
         return "\\left[\\begin{array}{lcl}\n"+s+"\n\\end{array}\\right]"
 
     def validate(self):
-        if forall(list(self.comps.__dict__.items()),lambda x: CheckField(x,self)) and self.create_hypobj() is not None:
+        if forall(list(self.comps.fields.items()),lambda x: CheckField(x,self)) and self.create_hypobj() is not None:
             return True
         else:
             return False
         
         
     def addfield(self, label, value):
-        if label in self.comps.__dict__: 
+        if label in self.comps.fields:
             print("\"" +label + "\"" + " is already a label in this record type")
         else: 
-            setattr(self.comps, label, value)
-    
-    # def pathvalue(self,path):
-    #     if len(path) == 1: 
-    #         return self.comps.__getattribute__(str(path[0]))
-    #     else: 
-    #         return Rec.pathvalue(self.comps.__getattribute__(path[0]), path[1:])
-            
+            self.comps.addfield(label, value)
     def pathvalue(self, path):
         splits=deque(path.split("."))
         if (len(splits) == 1):
-            if hasattr(self.comps, splits[0]):
-                return getattr(self.comps, splits[0])
+            if splits[0] in self.comps.fields:
+                return self.comps.fields[splits[0]]
             else:
                 if ttracing('pathvalue'):
                     print(splits[0]+' not a label in '+self.show())
                 return None
         else:
             addr = splits.popleft()
-            if not hasattr(self.comps, addr):
+            if addr not in self.comps.fields:
                 if ttracing('pathvalue'):
                     print('No attribute '+addr+' in '+show(self.comps))
                 return None
-            elif not hasattr(getattr(self.comps, addr), 'pathvalue'):
+            elif not hasattr(self.comps.fields[addr], 'pathvalue'):
                 if ttracing('pathvalue'):
-                    print('No paths into '+show(getattr(self.comps, addr)))
+                    print('No paths into '+show(self.comps.fields[addr]))
                 return None
             else:
-                return getattr(self.comps, addr).pathvalue(".".join(splits))
+                return self.comps.fields[addr].pathvalue(".".join(splits))
     def learn_witness_condition(self,c):
         logtype(self,c)
     def learn_witness_type(self,c):
@@ -600,8 +593,8 @@ class RecType(TypeClass):
     def create(self):
         res = Rec()
         depfields = RecType()
-        for l in self.comps.__dict__:
-            T = getattr(self.comps, l)
+        for l in self.comps.fields:
+            T = self.comps.fields[l]
             if isinstance(T,TypeClass):
                 res.addfield(l,T.in_poss(self.poss).create())
             else: depfields.addfield(l,T)
@@ -610,8 +603,8 @@ class RecType(TypeClass):
     def create_hypobj(self):
         res = Rec()
         depfields = RecType()
-        for l in self.comps.__dict__:
-            T = getattr(self.comps, l)
+        for l in self.comps.fields:
+            T = self.comps.fields[l]
             if isinstance(T,TypeClass):
                 res.addfield(l,T.create_hypobj())
             else: depfields.addfield(l,T)
@@ -622,16 +615,15 @@ class RecType(TypeClass):
     
     #Recursive for future use??            
     def Relabel(self, oldlabel, newlabel, recursive=False):
-        if oldlabel in self.comps.__dict__:
-            value = self.comps.__dict__[oldlabel]
-            delattr(self.comps, oldlabel)
-            setattr(self.comps, newlabel, value)
+        if oldlabel in self.comps.fields:
+            value = self.comps.fields.pop(oldlabel)
+            self.comps.fields[newlabel] = value
         return
     
     def subst(self,v,a):
         res = RecType()
-        for l in self.comps.__dict__.keys():
-            lval = getattr(self.comps, l)
+        for l in self.comps.fields:
+            lval = self.comps.fields[l]
             if lval == v:
                 res.addfield(l,a)
             elif isinstance(lval,str):
@@ -720,21 +712,21 @@ class RecType(TypeClass):
 
 def LabelsRecType(T):
     if isinstance(T, RecType):
-        return T.comps.__dict__.keys()
+        return T.comps.fields.keys()
     else:
         print('LabelsRecType not defined on '+ show(T) +' (not a record type)')
         return None
 
 def AttValRecType(T,l):
     if isinstance(T, RecType):
-        return getattr(T.comps, l)
+        return T.comps.fields[l]
     else:
         print('AttValRecType not defined on '+show(T)+' (not a record type)')
         return None
        
 def RecOfRecType(r,T,M):
-    TypeLabels = [l for l in T.comps.__dict__]
-    RecordLabels = [l for l in r.__dict__]
+    TypeLabels = [l for l in T.comps.fields]
+    RecordLabels = [l for l in r.fields]
     if forsome(TypeLabels, lambda l: l not in RecordLabels):
         return False
     elif forall(TypeLabels, lambda l: l in RecordLabels and QueryField(l,r,T,M)):
@@ -743,8 +735,8 @@ def RecOfRecType(r,T,M):
         return False
 
 def QueryField(l,r,T,M):
-    TInField = getattr(T.comps, l)
-    Obj = getattr(r, l)
+    TInField = T.comps.fields[l]
+    Obj = r.fields[l]
     if isinstance(Obj,HypObj):  # Should this be removed now?
         M = _M
     if isinstance(TInField, TypeClass):
@@ -788,13 +780,13 @@ def CheckPath(path,RecT):
         else: return True
 
 def ProcessDepFields(depfields,res,rtype,mode='real'):
-    if len(depfields.comps.__dict__) == 0:
+    if len(depfields.comps.fields) == 0:
         return res
     else:
-        oldlength = len(depfields.comps.__dict__)
+        oldlength = len(depfields.comps.fields)
         todelete = []
-        for l in depfields.comps.__dict__:
-            Resolved = ComputeDepType(res,getattr(depfields.comps, l),rtype.poss)
+        for l in depfields.comps.fields:
+            Resolved = ComputeDepType(res,depfields.comps.fields[l],rtype.poss)
             #print(show(Resolved))
             if 'not a label' in show(Resolved):  #Is this condition still used?
                 pass
@@ -810,8 +802,8 @@ def ProcessDepFields(depfields,res,rtype,mode='real'):
                 else:
                     print(mode+' not recognized as option for ProcessDepFields')
         for l in todelete:
-            del depfields.comps.__dict__[l]
-        if len(depfields.comps.__dict__) < oldlength:
+            del depfields.comps.fields[l]
+        if len(depfields.comps.fields) < oldlength:
             return ProcessDepFields(depfields,res,rtype,mode)
         else:
             if ttracing('create') or ttracing('create_hypobj'):

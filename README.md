@@ -11,8 +11,8 @@ can be made with more confidence.
 - NumPy
 - IPython, for notebook and LaTeX display helpers
 
-Notebook work can also use JupyterLab and IPykernel via the optional
-`notebooks` dependency group.
+Notebook work can also use JupyterLab via the optional `notebooks` dependency
+group.
 
 ## Development
 
@@ -27,6 +27,9 @@ Run tests:
 ```sh
 python -m unittest discover -s tests
 ```
+
+The test suite includes regression tests, the Python example scripts, and
+in-memory execution of the notebooks.
 
 The first cleanup pass focuses on compatibility-safe modernization: packaging
 metadata, basic regression tests, mutable-default cleanup, and warning fixes.

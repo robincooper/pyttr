@@ -35,6 +35,25 @@ class PackageImportTests(unittest.TestCase):
         self.assertEqual(FunType(ind, ind).show(), "(Ind->Ind)")
         self.assertEqual(TTRStringType([ind]).show(), "Ind")
 
+    def test_split_probttrtype_modules_import(self):
+        from pyttr.prob_compound_types import MeetType
+        from pyttr.prob_constraints import PConstraint
+        from pyttr.prob_predicates import PType
+        from pyttr.prob_record_types import RecType
+        from pyttr.prob_terms import Fun, Possibility
+        from pyttr.prob_type_core import BType
+        from pyttr.ttrtypes import Pred
+
+        ind = BType("Ind")
+        pred = Pred("run", [ind])
+
+        self.assertEqual(PConstraint(1).show(), "1.0")
+        self.assertEqual(PType(pred, ["j"]).show(), "run(j)")
+        self.assertEqual(MeetType(ind, ind).show(), "(Ind&Ind)")
+        self.assertEqual(RecType({"x": ind}).show(), "{x : Ind}")
+        self.assertEqual(Fun("x", ind, "x").app("j"), "j")
+        self.assertEqual(Possibility("M").show().splitlines()[1], "M:")
+
 
 if __name__ == "__main__":
     unittest.main()

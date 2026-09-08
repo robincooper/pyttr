@@ -560,8 +560,8 @@ class RecType(TypeClass):
         chart = {}
         count = -1
         nondepfields = RecType()
-        for l in self.comps.fields:
-            T = self.comps.fields[l]
+        for l in self.comps:
+            T = self.comps[l]
             if isinstance(T,RecType):
                 count = count+1
                 chart[count] = []
@@ -610,8 +610,8 @@ class RecType(TypeClass):
         #print(show(nondepfields))
         if count == 0:
             newrecs = []
-            for l in nondepfields.comps.fields:
-               matches = nondepfields.comps.fields[l].in_poss(self.poss).sample(n)
+            for l in nondepfields.comps:
+               matches = nondepfields.comps[l].in_poss(self.poss).sample(n)
                if newrecs == []:
                    for i in range(2*n):
                        m = np.random.choice(matches)
@@ -624,12 +624,12 @@ class RecType(TypeClass):
                 chart[count].append(r)
         else:
             for rec in chart[count-1]:
-                if set([l for l in nondepfields.comps.fields]).issubset(set([l for l in rec.fields])):
+                if set([l for l in nondepfields.comps]).issubset(set([l for l in rec])):
                     chart[count].append(rec)
                 else:
                     newrecs = []
-                    for l in [l for l in nondepfields.comps.fields if not l in rec.fields]:
-                       matches = nondepfields.comps.fields[l].in_poss(self.poss).sample(n)
+                    for l in [l for l in nondepfields.comps if not l in rec]:
+                       matches = nondepfields.comps[l].in_poss(self.poss).sample(n)
                        if newrecs == []:
                            for i in range(2*n):
                                m = np.random.choice(matches)
@@ -669,8 +669,8 @@ def RecOfRecType(r,T,M,c,oracle):
     if not isinstance(r,Rec):
         return PConstraint(0)
     else:
-        TypeLabels = [l for l in T.comps.fields]
-        RecordLabels = [l for l in r.fields]
+        TypeLabels = [l for l in T.comps]
+        RecordLabels = [l for l in r]
         if forsome(TypeLabels, lambda l: l not in RecordLabels):
             return PConstraint(0)
         else:
@@ -683,8 +683,8 @@ def RecOfRecType(r,T,M,c,oracle):
 def QueryField(l,r,T,M):
     if ttracing('QueryField'):
         print('QueryField args: ', show([l,r,T,M]))
-    TInField = T.comps.fields[l]
-    Obj = r.fields[l]
+    TInField = T.comps[l]
+    Obj = r[l]
     # if isinstance(Obj,HypObj):
     #    M = _M
     if isinstance(TInField, TypeClass):

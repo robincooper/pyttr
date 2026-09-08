@@ -1,6 +1,8 @@
 from collections import deque
 from .utils import show,to_latex,ttracing,substitute
 
+_MISSING = object()
+
 class Rec:
     def __init__(self,d=None):
         self.fields = {}
@@ -35,6 +37,15 @@ class Rec:
     def __contains__(self, label):
         return label in self.fields
 
+    def __getitem__(self, label):
+        return self.fields[label]
+
+    def __setitem__(self, label, value):
+        self.fields[label] = value
+
+    def __delitem__(self, label):
+        del self.fields[label]
+
     def __iter__(self):
         return iter(self.fields)
 
@@ -47,8 +58,22 @@ class Rec:
     def keys(self):
         return self.fields.keys()
 
+    def labels(self):
+        return self.keys()
+
     def values(self):
         return self.fields.values()
+
+    def get(self, label, default=None):
+        return self.fields.get(label, default)
+
+    def pop(self, label, default=_MISSING):
+        if default is _MISSING:
+            return self.fields.pop(label)
+        return self.fields.pop(label, default)
+
+    def as_dict(self):
+        return dict(self.fields)
             
     def show(self):
         s = ""

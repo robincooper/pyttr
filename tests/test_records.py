@@ -41,16 +41,31 @@ class RecTests(unittest.TestCase):
     def test_fields_are_not_stored_directly_on_instance_dict(self):
         rec = Rec({"x": "a"})
 
-        self.assertEqual(rec.__dict__, {"fields": {"x": "a"}})
-        self.assertEqual(rec.fields["x"], "a")
+        self.assertNotIn("x", rec.__dict__)
+        self.assertEqual(rec["x"], "a")
         self.assertEqual(rec.x, "a")
 
     def test_label_can_match_method_name(self):
         rec = Rec({"show": "label-value"})
 
         self.assertEqual(rec.pathvalue("show"), "label-value")
+        self.assertEqual(rec["show"], "label-value")
         self.assertTrue(callable(rec.show))
         self.assertEqual(show(rec), "{show = label-value}")
+
+    def test_mapping_api(self):
+        rec = Rec({"x": "a"})
+
+        self.assertIn("x", rec)
+        self.assertEqual(rec.get("x"), "a")
+        self.assertEqual(rec.get("missing", "fallback"), "fallback")
+        self.assertEqual(list(rec.labels()), ["x"])
+        self.assertEqual(list(rec.items()), [("x", "a")])
+
+        rec["y"] = "b"
+        self.assertEqual(rec["y"], "b")
+        self.assertEqual(rec.pop("y"), "b")
+        self.assertNotIn("y", rec)
 
 
 if __name__ == "__main__":

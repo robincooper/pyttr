@@ -32,6 +32,26 @@ python -m unittest discover -s tests
 The test suite includes regression tests, the Python example scripts, and
 in-memory execution of the notebooks.
 
+Run the full local verification suite:
+
+```sh
+python scripts/check.py
+```
+
+or:
+
+```sh
+make check
+```
+
+This runs AST parsing, warnings-as-errors import checks, the unittest suite,
+and a fresh-install smoke test from outside the repository. To run only the
+fresh-install smoke test:
+
+```sh
+make fresh-install
+```
+
 ## Layout
 
 - `src/pyttr/`: canonical package code

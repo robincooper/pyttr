@@ -100,10 +100,25 @@ import pyttr.type_core
 import pyttr.type_ops
 import pyttr.utils
 
+from pyttr import probttrtypes, ttrtypes
+from pyttr.prob_record_types import RecType as ProbRecType
 from pyttr.probttrtypes import BType as PBType, PConstraint
+from pyttr.record_types import RecType as ModuleRecType
 from pyttr.records import Rec
 from pyttr.ttrtypes import BType, RecType
 
+assert pyttr.__all__ == ()
+assert ttrtypes.RecType is ModuleRecType
+assert probttrtypes.RecType is ProbRecType
+assert ttrtypes.RecType is not probttrtypes.RecType
+for name in ("Type", "BType", "PType", "RecType", "Fun"):
+    assert not hasattr(pyttr, name), name
+try:
+    from pyttr import RecType as RootRecType
+except ImportError:
+    pass
+else:
+    raise AssertionError(f"pyttr unexpectedly exported {RootRecType!r}")
 assert Rec({"x": "a"}).x == "a"
 assert BType("Ind").show() == "Ind"
 assert RecType({"x": BType("Ind2")}).show() == "{x : Ind2}"
@@ -182,13 +197,28 @@ import pyttr
 import pyttr.prob_constraints
 import pyttr.prob_record_types
 import pyttr.prob_type_core
+from pyttr import probttrtypes, ttrtypes
+from pyttr.prob_record_types import RecType as ProbRecType
 from pyttr.probttrtypes import BType as PBType, PConstraint
+from pyttr.record_types import RecType as ModuleRecType
 from pyttr.records import Rec
 from pyttr.ttrtypes import BType, RecType
 
 original_root = Path(os.environ["PYTTR2_ORIGINAL_ROOT"]).resolve()
 installed_from = Path(pyttr.__file__).resolve()
 assert original_root not in installed_from.parents, installed_from
+assert pyttr.__all__ == ()
+assert ttrtypes.RecType is ModuleRecType
+assert probttrtypes.RecType is ProbRecType
+assert ttrtypes.RecType is not probttrtypes.RecType
+for name in ("Type", "BType", "PType", "RecType", "Fun"):
+    assert not hasattr(pyttr, name), name
+try:
+    from pyttr import RecType as RootRecType
+except ImportError:
+    pass
+else:
+    raise AssertionError(f"pyttr unexpectedly exported {RootRecType!r}")
 assert Rec({"x": "a"}).x == "a"
 assert BType("Ind").show() == "Ind"
 assert RecType({"x": BType("Ind2")}).show() == "{x : Ind2}"

@@ -54,6 +54,23 @@ class PackageImportTests(unittest.TestCase):
         self.assertEqual(Fun("x", ind, "x").app("j"), "j")
         self.assertEqual(Possibility("M").show().splitlines()[1], "M:")
 
+    def test_package_root_does_not_export_ambiguous_type_names(self):
+        import pyttr
+        from pyttr import probttrtypes, ttrtypes
+        from pyttr.prob_record_types import RecType as ProbRecType
+        from pyttr.record_types import RecType
+
+        self.assertEqual(pyttr.__all__, ())
+        self.assertIs(ttrtypes.RecType, RecType)
+        self.assertIs(probttrtypes.RecType, ProbRecType)
+        self.assertIsNot(ttrtypes.RecType, probttrtypes.RecType)
+
+        for name in ("Type", "BType", "PType", "RecType", "Fun"):
+            self.assertFalse(hasattr(pyttr, name))
+
+        with self.assertRaises(ImportError):
+            exec("from pyttr import RecType", {})
+
 
 if __name__ == "__main__":
     unittest.main()

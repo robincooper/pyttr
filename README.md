@@ -60,6 +60,28 @@ make fresh-install
 - top-level `records.py`, `ttrtypes.py`, `probttrtypes.py`, `utils.py`, and
   `config.py`: compatibility wrappers for legacy imports
 
+## Public API
+
+Use explicit module-qualified imports. Deterministic TTR objects are available
+from `pyttr.ttrtypes` and its smaller implementation modules:
+
+```python
+from pyttr.ttrtypes import RecType
+from pyttr.record_types import RecType
+```
+
+Probabilistic TTR objects are available from `pyttr.probttrtypes` and its
+smaller implementation modules:
+
+```python
+from pyttr.probttrtypes import RecType
+from pyttr.prob_record_types import RecType
+```
+
+The package root intentionally does not re-export names such as `Type`,
+`BType`, `PType`, `RecType`, or `Fun`, because those names can have different
+meanings in deterministic, probabilistic, and future alternative modules.
+
 `Rec` values store user labels in the `fields` mapping. Attribute access such
 as `record.x` is still supported for compatibility, but labels no longer live
 directly in the instance `__dict__`, so they cannot overwrite methods like

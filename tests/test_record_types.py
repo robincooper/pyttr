@@ -53,6 +53,29 @@ class RecordTypeBehaviorTests(unittest.TestCase):
         self.assertFalse(record_type.query(Rec({"x": "k", "event": "e_j"})))
         self.assertFalse(record_type.query(Rec({"x": "j"})))
 
+    def test_duplicate_record_type_label_warns_and_keeps_existing_value(self):
+        ind = ttr.BType("Ind")
+        other = ttr.BType("Other")
+        record_type = ttr.RecType({"x": ind})
+
+        with self.assertWarnsRegex(UserWarning, '"x" is already a label'):
+            record_type.addfield("x", other)
+
+        self.assertIs(record_type.pathvalue("x"), ind)
+
+    def test_record_type_helpers_raise_on_non_record_type_inputs(self):
+        ind = ttr.BType("Ind")
+
+        with self.assertRaisesRegex(TypeError, "LabelsRecType is not defined"):
+            ttr.LabelsRecType(ind)
+
+        with self.assertRaisesRegex(TypeError, "AttValRecType is not defined"):
+            ttr.AttValRecType(ind, "x")
+
+    def test_process_dependent_fields_rejects_unknown_mode(self):
+        with self.assertRaisesRegex(ValueError, "not recognized as option"):
+            ttr.ProcessDepFields(ttr.RecType(), Rec(), ttr.RecType(), "other")
+
 
 if __name__ == "__main__":
     unittest.main()

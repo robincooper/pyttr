@@ -9,11 +9,16 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from pyttr import ttrtypes as ttr
+from pyttr.utils import nottrace, ttrace, ttracing_list
 
 
 class TypeTests(unittest.TestCase):
     def setUp(self):
         ttr.initmodel()
+        nottrace()
+
+    def tearDown(self):
+        nottrace()
 
     def test_basic_type_judgement_and_query(self):
         ind = ttr.BType("Ind")
@@ -41,6 +46,13 @@ class TypeTests(unittest.TestCase):
 
         self.assertEqual(fun.appc("j"), "j")
         self.assertIsNone(fun.appc("not_an_ind"))
+
+    def test_tracing_can_disable_single_channel(self):
+        self.assertIn("pathvalue", ttrace("pathvalue"))
+
+        nottrace("pathvalue")
+
+        self.assertNotIn("pathvalue", ttracing_list)
 
 
 if __name__ == "__main__":

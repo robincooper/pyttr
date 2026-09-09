@@ -1,5 +1,5 @@
 from collections import deque
-from .utils import show,to_latex,ttracing,substitute
+from .utils import show, substitute, to_latex, trace, warn
 
 _MISSING = object()
 
@@ -106,7 +106,7 @@ class Rec:
         
     def addfield(self, label, value):
         if label in self.fields:
-            print("\"" +label + "\"" + " is already a label in " +show(self))
+            warn('"' + label + '"' + " is already a label in " + show(self))
         else: 
             self.fields[label] = value
             return self
@@ -123,7 +123,7 @@ class Rec:
             if isinstance(val, Rec):
                 val.addpathl(pathl[1:], value)
             else:
-                print(val + ' is not a record.')
+                warn(show(val) + ' is not a record.')
             return self
         else:
             self.addfield(pathl[0], Rec().addpathl(pathl[1:],value))
@@ -135,24 +135,19 @@ class Rec:
             if splits[0] in self.fields:
                 return self.fields[splits[0]]
             else:
-                if ttracing('pathvalue'):
-                    print(splits[0]+' not a label in '+self.show())
+                trace('pathvalue', splits[0]+' not a label in '+self.show())
                 return None
         else:
             addr = splits.popleft()
             if addr not in self.fields:
-                if ttracing('pathvalue'):
-                    print('No attribute '+addr+' in '+show(self))
+                trace('pathvalue', 'No attribute '+addr+' in '+show(self))
                 return None
             elif not hasattr(self.fields[addr], 'pathvalue'):
-                if ttracing('pathvalue'):
-                    print('No paths into '+show(self.fields[addr]))
+                trace('pathvalue', 'No paths into '+show(self.fields[addr]))
                 return None
             else:
                 return self.fields[addr].pathvalue(".".join(splits))
     
-    #Recursive for future use
-    #Needs redefining so as not to be destructive?
     def relabel(self, oldlabel, newlabel):
         newrec = Rec(self.fields)
         if oldlabel in newrec.fields:
@@ -203,12 +198,9 @@ class Rec:
             res.addfield(l,self.fields[l])
         for l in [l for l in self.fields if l in r.fields]:
             rl = r.fields[l]
-            #print('rl: ',show(rl))
             sl = self.fields[l]
-            #print('sl: ',show(sl))
             if isinstance(rl, Rec) and isinstance(sl,Rec):
                 res1 = sl.addrec(rl)
-                #print('res1: ',show(res1))
                 if res1:
                     res.addfield(l,res1)
                 else:

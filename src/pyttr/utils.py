@@ -1,6 +1,7 @@
 from itertools import count
 import re
 import inspect
+import warnings
 
 try:
     from IPython.display import Latex
@@ -12,18 +13,7 @@ gennum = {}
 def gensym(x):
     if x not in gennum:
         gennum[x] = count() 
-    #return x+'_{'+str(gennum[x].__next__())+'}'
     return x+str(gennum[x].__next__())
-
-# def some_condition(conds,obj,L):
-#     res = some_condition1(conds,obj,L)
-#     if 'loop_found' in L:
-#         res = False
-#     if len(list(filter(lambda x: x is 'query',[x[3] for x in inspect.stack()])))==1:
-#         L.clear()
-#     return res
-    
-    
 
 def some_condition(conds,obj):
     if len(conds) == 0:
@@ -38,23 +28,10 @@ def some_condition(conds,obj):
 def check_stack(f,argsd):
     frames = filter(lambda x: x[3] == f and subdict(argsd,inspect.getargvalues(x[0]).locals),
                     inspect.stack())
-    # fr1 = next(frames,None)
-    # if fr1:
-    #     print(list(inspect.getargvalues(fr1[0]).locals))
-    # else:
-    #     print('No fr1')
-    # fr2 = next(frames,None)
-    # if fr2:
-    #     print(list(inspect.getargvalues(fr2[0]).locals))
-    # else:
-    #     print('No fr2')
     next(frames,None)
     if next(frames,None):
         return True
                    
-
-#  and list(inspect.getargvalues(x[0]).locals.values())[:len(args)] == args
-
 def subdict(d1,d2):
     return forall([k for k in d1], lambda key: key in d2 and d1[key] == d2[key])
 
@@ -140,20 +117,6 @@ def to_ipython_latex(obj):
 def print_latex(obj):
     return print(to_ipython_latex(obj))
 
-# ttrmacros = '\newcommand{\record}[1]{$\left[\mbox{\begin{tabular}{lcl} #1 \end{tabular}}\right]$} \n \
-# \newcommand{\smallrecord}[1]{$\left[\mbox{\begin{tabular}{@{}l@{}c@{}l@{}} #1 \n \
-# \end{tabular}}\right]$} \n \
-# \n \
-# \newcommand{\field}[2]{#1 & = & #2} \n \
-# \newcommand{\tfield}[2]{#1 & : & #2} \n \
-# \newcommand{\smalltfield}[2]{#1:#2 & &} \n \
-# \newcommand{\mfield}[3]{#1=#2 & : & #3} \n \
-# \newcommand{\smallmfield}[3]{#1=#2:#3 & &} \n \
-# \newcommand{\rfield}[3]{#1$\underline{\varepsilon}$#2 & : & #3} \n \
-# \newcommand{\smallrfield}[3]{#1$\underline{\varepsilon}$#2:#3 & &} \n \
-# \newcommand{\hfield}[2]{{\sc #1} & & #2} \n'
-
-
 def show_latex(obj):
     if Latex is None:
         raise RuntimeError('IPython is required for show_latex()')
@@ -161,18 +124,6 @@ def show_latex(obj):
         
 def showall(objs):
     return [show(obj) for obj in objs]
-
-# def substitute(obj,v,a):
-#     if obj == v:
-#         return a
-#     elif isinstance(obj,list):
-#         return [substitute(x,v,a) for x in obj]
-#     elif isinstance(obj,tuple):
-#         return tuple((substitute(x,v,a) for x in obj))
-#     elif 'subst' in dir(obj):
-#         return obj.subst(v,a)
-#     else: 
-#         return obj
 
 def substitute(obj,v,a):
     if obj == v:
@@ -228,9 +179,8 @@ def nottrace(s='all'):
     global ttracing_list
     if s == 'all':
         ttracing_list.clear()
-    elif s in ttracing:
+    elif s in ttracing_list:
         ttracing_list.remove(s)
-    else: pass
     return ttracing_list
 
 def ttracing(s):
@@ -239,3 +189,14 @@ def ttracing(s):
         return True
     else:
         return False
+
+def trace(s, *values, **kwargs):
+    if ttracing(s):
+        print(*values, **kwargs)
+
+def trace_any(channels, *values, **kwargs):
+    if any(ttracing(s) for s in channels):
+        print(*values, **kwargs)
+
+def warn(message, category=UserWarning):
+    warnings.warn(message, category, stacklevel=2)

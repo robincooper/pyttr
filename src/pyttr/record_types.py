@@ -5,7 +5,7 @@ from .records import Rec
 from .terms import AbsPath, HypObj
 from .type_core import TypeClass, logtype, logtype_t
 from .type_ops import combine_dep_types, merge_dep_types, subtype_of_dep_types
-from .utils import forall, forsome, show, substitute, to_latex, ttracing
+from .utils import forall, forsome, show, substitute, to_latex, trace, trace_any, warn
 
 class RecType(TypeClass):
     def __init__(self,d=None):
@@ -63,7 +63,7 @@ class RecType(TypeClass):
         
     def addfield(self, label, value):
         if label in self.comps:
-            print("\"" +label + "\"" + " is already a label in this record type")
+            warn('"' + label + '"' + " is already a label in this record type")
         else: 
             self.comps.addfield(label, value)
     def pathvalue(self, path):
@@ -72,18 +72,15 @@ class RecType(TypeClass):
             if splits[0] in self.comps:
                 return self.comps[splits[0]]
             else:
-                if ttracing('pathvalue'):
-                    print(splits[0]+' not a label in '+self.show())
+                trace('pathvalue', splits[0]+' not a label in '+self.show())
                 return None
         else:
             addr = splits.popleft()
             if addr not in self.comps:
-                if ttracing('pathvalue'):
-                    print('No attribute '+addr+' in '+show(self.comps))
+                trace('pathvalue', 'No attribute '+addr+' in '+show(self.comps))
                 return None
             elif not hasattr(self.comps[addr], 'pathvalue'):
-                if ttracing('pathvalue'):
-                    print('No paths into '+show(self.comps[addr]))
+                trace('pathvalue', 'No paths into '+show(self.comps[addr]))
                 return None
             else:
                 return self.comps[addr].pathvalue(".".join(splits))
@@ -114,7 +111,6 @@ class RecType(TypeClass):
 
         
     
-    #Recursive for future use??            
     def Relabel(self, oldlabel, newlabel, recursive=False):
         if oldlabel in self.comps:
             value = self.comps.pop(oldlabel)
@@ -131,7 +127,6 @@ class RecType(TypeClass):
                 res.addfield(l,lval)
             else: 
                 res.addfield(l,substitute(lval,v,a))
-        #print(show(res))
         return res
 
     def eval(self):
@@ -217,15 +212,13 @@ def LabelsRecType(T):
     if isinstance(T, RecType):
         return T.comps.labels()
     else:
-        print('LabelsRecType not defined on '+ show(T) +' (not a record type)')
-        return None
+        raise TypeError('LabelsRecType is not defined on ' + show(T) + ' (not a record type)')
 
 def AttValRecType(T,l):
     if isinstance(T, RecType):
         return T.comps[l]
     else:
-        print('AttValRecType not defined on '+show(T)+' (not a record type)')
-        return None
+        raise TypeError('AttValRecType is not defined on ' + show(T) + ' (not a record type)')
 
 def RecOfRecType(r,T,M):
     TypeLabels = [l for l in T.comps]
@@ -240,7 +233,7 @@ def RecOfRecType(r,T,M):
 def QueryField(l,r,T,M):
     TInField = T.comps[l]
     Obj = r[l]
-    if isinstance(Obj,HypObj):  # Should this be removed now?
+    if isinstance(Obj,HypObj):
         M = _M
     if isinstance(TInField, TypeClass):
         return TInField.in_poss(M).query(Obj) 
@@ -250,7 +243,6 @@ def QueryField(l,r,T,M):
 
 def ComputeDepType(r, DepType, M):
     if DepType[1] == []:
-        #print(show(DepType[0]))
         return DepType[0]
     else:
         pth = DepType[1][0]
@@ -258,7 +250,6 @@ def ComputeDepType(r, DepType, M):
             newfun = DepType[0].appc_m(pth.rec.pathvalue(pth.path), M)
         else:
             newfun = DepType[0].appc_m(r.pathvalue(DepType[1][0]), M)
-        #print(show(newfun))
         return ComputeDepType(r, (newfun, DepType[1][1:]), M)
 
 def CheckField(i,RecT):
@@ -278,11 +269,12 @@ def CheckPath(path,RecT):
     else:
         res = RecT.pathvalue(path)
         if res is None:
-            #print(res)
             return False
         else: return True
 
 def ProcessDepFields(depfields,res,rtype,mode='real'):
+    if mode not in ('real', 'hyp'):
+        raise ValueError(mode + ' not recognized as option for ProcessDepFields')
     if len(depfields.comps) == 0:
         return res
     else:
@@ -290,8 +282,7 @@ def ProcessDepFields(depfields,res,rtype,mode='real'):
         todelete = []
         for l in depfields.comps:
             Resolved = ComputeDepType(res,depfields.comps[l],rtype.poss)
-            #print(show(Resolved))
-            if 'not a label' in show(Resolved):  #Is this condition still used?
+            if 'not a label' in show(Resolved):
                 pass
             elif Resolved is None:
                 pass
@@ -302,15 +293,12 @@ def ProcessDepFields(depfields,res,rtype,mode='real'):
                 elif mode=='hyp':
                     res.addfield(l,Resolved.create_hypobj())
                     todelete.append(l)
-                else:
-                    print(mode+' not recognized as option for ProcessDepFields')
         for l in todelete:
             del depfields.comps[l]
         if len(depfields.comps) < oldlength:
             return ProcessDepFields(depfields,res,rtype,mode)
         else:
-            if ttracing('create') or ttracing('create_hypobj'):
-                print('Unresolved dependency in '+show(rtype))
+            trace_any(('create', 'create_hypobj'), 'Unresolved dependency in '+show(rtype))
             return None
 
 

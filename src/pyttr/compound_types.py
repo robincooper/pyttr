@@ -3,7 +3,7 @@ from .records import Rec
 from .terms import Fun, HypObj, LazyObj, Pred
 from .type_core import TypeClass, logtype, logtype_t
 from .type_ops import equal
-from .utils import check_stack, forall, forsome, gensym, show, showall, some_condition, substitute, to_latex, ttracing
+from .utils import check_stack, forall, forsome, gensym, show, showall, some_condition, substitute, to_latex, trace
 
 class PTypeClass(TypeClass):
     def __init__(self,pred,args): 
@@ -49,10 +49,6 @@ class PTypeClass(TypeClass):
         self.comps.args = newargs
         return self
     def query(self,a):
-        # print('super',super().query(a))
-        # if super().query(a):
-        #     print('super',super().query(a))
-        #     return True
         if check_stack('query', dict(a=a,self=self)):
              return '*'
         elif a in self.witness_cache: return True
@@ -74,10 +70,6 @@ class PTypeClass(TypeClass):
             if not isinstance(a,HypObj):
                 self.witness_cache.append(a)
             return True
-        # elif self.poss == '' and forsome(self.comps.pred.witness_funs, lambda f: f(self.comps.args).query(a)):
-        #     if not isinstance(a, HypObj):
-        #         self.witness_cache.append(a)
-        #     return True
         elif forsome(self.comps.pred.witness_funs, lambda f: f(self.comps.args).in_poss(self.poss).query(a)):
             if not isinstance(a, HypObj):
                 self.witness_cache.append(a)
@@ -107,8 +99,7 @@ class MeetType(TypeClass):
     def to_latex(self,vars):
         return '\\left(\\begin{array}{rcl}\n'+ self.comps.left.to_latex(vars)+'\\wedge'+self.comps.right.to_latex(vars)+'\n\\end{array}\\right)'
     def learn_witness_condition(self,c):
-        if ttracing('learn_witness_condition'):
-            print('Meet types are logical and cannot learn new conditions')
+        trace('learn_witness_condition', 'Meet types are logical and cannot learn new conditions')
     def learn_witness_type(self,c):
         logtype_t(self,c)
     def validate(self):
@@ -213,8 +204,6 @@ class FunType(TypeClass):
                 and isinstance(self.comps.range, TypeClass):
             return True
         else: return False
-    # def create_hypobj(self):
-    #     return Fun(gensym('x'),self.comps.domain,self.comps.range.create_hypobj())
     def subst(self,v,a):
         if self == v:
             return a

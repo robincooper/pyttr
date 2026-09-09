@@ -2,7 +2,7 @@ from copy import copy
 
 from .model import _M, add_to_model
 from .records import Rec
-from .utils import gensym, some_condition, forsome, show, to_latex, showall, ttracing, check_stack
+from .utils import check_stack, forsome, gensym, show, showall, some_condition, to_latex, trace
 
 class TypeClass:
     def __init__(self,name='',cs=None):
@@ -16,20 +16,6 @@ class TypeClass:
         self.witness_conditions = []
         self.witness_types = []
         self.poss = _M
-    # def in_poss(self,poss):
-    #     key = self.show()
-    #     if poss == _M:
-    #         return self
-    #     elif key not in poss.model:
-    #         poss.model[key] = deepcopy(self)
-    #         poss.model[key].poss = poss
-    #     else:
-    #         old = poss.model[key]
-    #         old.witness_cache.extend([x for x in self.witness_cache if x not in old.witness_cache])
-    #         old.supertype_cache.extend([x for x in self.supertype_cache if x not in old.supertype_cache])
-    #         old.witness_conditions.extend([x for x in self.witness_conditions if x not in old.witness_conditions])
-    #         old.witness_types.extend([x for x in self.witness_types if x not in old.witness_types])
-    #     return poss.model[key]
     def in_poss(self,poss):
         key = self.show()
         if poss == _M:
@@ -176,13 +162,11 @@ def BType(name=None,poss=_M):
 
 
 def logtype(x,c): 
-    if ttracing('learn_witness_condition'):
-        print(show(x)+' is a logical type and cannot learn new conditions')
+    trace('learn_witness_condition', show(x)+' is a logical type and cannot learn new conditions')
 
 
 def logtype_t(x,c): 
-    if ttracing('learn_witness_type'):
-        print(show(x)+' is a logical type and cannot learn new conditions')
+    trace('learn_witness_type', show(x)+' is a logical type and cannot learn new conditions')
 
 
 __all__ = [

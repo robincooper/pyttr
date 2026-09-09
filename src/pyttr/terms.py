@@ -1,6 +1,6 @@
 from .records import Rec
 from .type_core import TypeClass
-from .utils import gensym, forall, substitute, show, to_latex, ttracing
+from .utils import forall, gensym, show, substitute, to_latex, trace, warn
 
 class Pred:
     def __init__(self,name,arity):
@@ -39,27 +39,22 @@ class Fun(object):
         else: 
             res = substitute(self.body,self.var,arg)
             if hasattr(res, 'cache') and not isinstance(arg,HypObj):
-                return res.cache() #This conditional not used?
+                return res.cache()
             elif hasattr(res, 'eval'):
                 return res.eval()
-            # elif isinstance(res,HypObj):
-            #     res.depends_on.append(arg)
-            #     return res
             else:
                 return res
     def appc(self,arg):
         if self.validate_arg(arg):
             return self.app(arg)
         else:
-            if ttracing('appc'):
-                print (self.show()+'('+show(arg)+'): badly typed function application')
+            trace('appc', self.show()+'('+show(arg)+'): badly typed function application')
             return None
     def appc_m(self,arg,M):
         if self.validate_arg_m(arg,M):
             return self.app(arg)
         else:
-            if ttracing('appc_m'):
-                print (self.show()+'('+show(arg)+'): badly typed function application')
+            trace('appc_m', self.show()+'('+show(arg)+'): badly typed function application')
             return None            
                 
     def subst(self,v,a):
@@ -73,7 +68,6 @@ class Fun(object):
 class HypObj(object):
     def __init__(self,types):
         self.types = types
-        #self.depends_on = []
         self.name = gensym('h')
     def validate(self):
         return forall(self.types,lambda x: isinstance(x,TypeClass))
@@ -117,7 +111,7 @@ class LazyObj(object):
             else:
                 pass
         else:
-            print('Unable to compute type of ' + show(self))
+            warn('Unable to compute type of ' + show(self))
             return None
     def show(self):
         return show(self.oplist)

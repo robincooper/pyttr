@@ -31,9 +31,8 @@ class PTypeClass(TypeClass):
             for arg in self.comps.args:
                 if arg == v: newargs.append(a)
                 elif isinstance(arg,str): newargs.append(arg)
-                else: newargs.append(substitute(arg,v,a))      #arg.subst(v,a))
+                else: newargs.append(substitute(arg,v,a))
             return PType(self.comps.pred,newargs).in_poss(self.poss)
-        #subst needs to be defined so that probttrtypes.PType is used rather than ttrtypes.PType (Bill Noble pull request, 7 Mar 2022)
     eval = ttrtypes.PTypeClass.eval
     def _query_witness_conditions(self,a,c,oracle):
         if self.witness_conditions or self.comps.pred.witness_funs:
@@ -42,10 +41,6 @@ class PTypeClass(TypeClass):
                 condps.append(cond(a))
             for f in self.comps.pred.witness_funs:
                 type = f(self.comps.args).in_poss(self.poss)
-                # if check_stack('query',[a,c,oracle,type]):
-                #     res = PConstraint(0,1)
-                # else:
-                #     condps.append(type.query(a,c,oracle))
                 if not check_stack('query',[a,c,oracle,type]):
                     condps.append(type.query(a,c,oracle))
             res = PMax(condps)

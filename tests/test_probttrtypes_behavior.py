@@ -57,6 +57,19 @@ class ProbabilisticTypeBehaviorTests(unittest.TestCase):
         self.assertProbability(PMinus(PConstraint(0.7, 0.9), PConstraint(0.2, 0.3)), 0.5, 0.6)
         self.assertProbability(PPlus(first, second), 0.6, 0.8)
 
+    def test_probability_constraint_validation_warns_on_invalid_ranges(self):
+        self.assertTrue(PConstraint(0.2, 0.8).validate())
+        self.assertTrue(PConstraint(0.0, 0.0).validate())
+
+        with self.assertWarnsRegex(UserWarning, "-1.0 is less than 0"):
+            self.assertFalse(PConstraint(-1).validate())
+
+        with self.assertWarnsRegex(UserWarning, "1.2 is greater than 1"):
+            self.assertFalse(PConstraint(1.2).validate())
+
+        with self.assertWarnsRegex(UserWarning, "0.6 is greater than 0.1"):
+            self.assertFalse(PConstraint(0.6, 0.1).validate())
+
     def test_conjunction_and_disjunction_query_member_types(self):
         first = FixedQueryType(PConstraint(0.2, 0.5))
         second = FixedQueryType(PConstraint(0.3, 0.4))

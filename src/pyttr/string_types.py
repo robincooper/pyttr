@@ -18,14 +18,7 @@ class TTRString(object):
             return TTRString(self.items[len(firstT.items):])
         else:
             return False
-                             
-            
-        # for i in range(len(self.items)):
-        #     if T.query(TTRString(self.items[0:i+1])):
-        #         return(TTRString(self.items[i+1:]))
-        #     else:
-        #         pass
-        # return(False)
+
     def startswith_recursive(self,T):
         res = self.startswith(T)
         if res is False:
@@ -57,7 +50,6 @@ class TTRStringType(TypeClass):
     def show(self):
         return '^'.join([show(i) for i in self.comps.types])
     def to_latex(self,vars):
-        # TODO
         return '^\\frown'.join([to_latex(i,vars) for i in self.comps.types])
     def validate(self):
         return forall(self.comps.types, lambda T: isinstance(T,TypeClass))
@@ -104,9 +96,6 @@ class KPlusStringType(TypeClass):
         self.supertype_cache = []
         self.witness_conditions = \
           [lambda s: isinstance(s,TTRString) and s.startswith_recursive(self.comps.base_type)]
-           # and len(s.items)>0 \
-           # and forall(s.items,
-           #            lambda a: self.comps.base_type.in_poss(self.poss).query(a))]
         self.witness_types = []
         self.poss = _M
     def in_poss(self,poss):

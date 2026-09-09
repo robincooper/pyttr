@@ -24,13 +24,7 @@ def add_to_model(T,m=_M):
     key = T.show()
     if key in m.model:
         return m.model[key]
-    # elif 'validate' in dir(T) and T.validate():
-    #     m.model[key] = deepcopy(T)
-    #     m.model[key].poss = m
-    #     return  m.model[key]
     else:
-        # m.model[key] = copy(T)
-        # m.model[key].poss = m
         T.in_poss(m)
         return m.model[key] 
 

@@ -3,7 +3,7 @@ from .prob_constraints import ConjProb, DisjProb, PConstraint, PDiv, PNeg, PSum
 from .prob_type_core import QUERY_METHODS, TypeClass
 from .records import Rec
 from .ttrtypes import logtype, logtype_t
-from .utils import show, ttracing
+from .utils import show, trace
 
 class MeetType(TypeClass):
     def __init__(self,T1,T2):
@@ -106,11 +106,9 @@ class VarType(TypeClass):
     def learn_witness_type(self,c):
         logtype_t(self,c)
     def judge(self,a,n=1,max=None):
-        if ttracing('judge'):
-            print(show(self)+' is a variable type and cannot be judged')
+        trace('judge', show(self)+' is a variable type and cannot be judged')
     def judge_nonspec(self,n=1,max=None):
-        if ttracing('judge_nonspec'):
-            print(show(self)+' is a variable type and cannot be judged')
+        trace('judge_nonspec', show(self)+' is a variable type and cannot be judged')
     def query(self,a,c=None,oracle=None):
         if c is None:
             c = []
@@ -137,21 +135,11 @@ class VarType(TypeClass):
             return None
         elif [A for A in self.comps.value_types if T.subtype_of(A)] and [A for A in Ts if not T.subtype_of(A)]:
             return PConstraint(0)
-        # if [A for A in self.comps.value_types if equal(A,T)]: # T in self.comps.value_types 
-        #     if [A for (a,A) in c if list(filter(lambda B: A.subtype_of(B) and not equal(B,T),self.comps.value_types))]: #not self.subtype_of(B) and 
-        #         return PConstraint(0)
         elif len([A for A in self.comps.value_types if T.subtype_of(A)])>1:
             return PConstraint(0)
         else:
-            #print(show([A.query(a,c,oracle) for A in self.comps.value_types]))
             denominator = PSum([A.query(a,c,oracle) for A in self.comps.value_types])
             return PDiv(T.query(a,c,oracle),denominator)
-        # else:
-        #    supertypes = map(lambda T1 : T.subtype_of(T1), self.comps.value_types) 
-        #    if any(supertypes)  and any(supertypes):
-        #        return PConstraint(0)
-        #    else:
-        #        return PConstraint(0,1)
     def query_nonspec(self,c=None,oracle=None):
         if c is None:
             c = []

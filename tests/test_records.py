@@ -67,6 +67,15 @@ class RecTests(unittest.TestCase):
         self.assertEqual(rec.pop("y"), "b")
         self.assertNotIn("y", rec)
 
+    def test_duplicate_label_warns_and_keeps_existing_value(self):
+        rec = Rec({"x": "a"})
+
+        with self.assertWarnsRegex(UserWarning, '"x" is already a label'):
+            result = rec.addfield("x", "b")
+
+        self.assertIsNone(result)
+        self.assertEqual(rec["x"], "a")
+
 
 if __name__ == "__main__":
     unittest.main()

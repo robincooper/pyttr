@@ -5,7 +5,7 @@ import numpy as np
 from . import config, ttrtypes
 from .prob_constraints import DisjProb, PConstraint, PExtreme, PMax
 from .ttrtypes import HypObj, LazyObj, _M, add_to_model, equal
-from .utils import apply123, check_stack, gensym, show, ttracing
+from .utils import apply123, check_stack, gensym, show, trace
 
 QUERY_METHODS = [
     "_query_witness_cache",
@@ -64,68 +64,11 @@ class TypeClass(ttrtypes.TypeClass):
     def judge_nonspec(self,n=1,max=None):
         self.prob_nonspec = PConstraint(n,max)
         return self.prob_nonspec
-        
-    # def query(self, a,c=[],oracle=None):
-    #     def setres(x):
-    #         nonlocal res
-    #         res = x
-    #         return x
-    #     if check_stack('query',dict(a=a,c=c,oracle=oracle,self=self)):
-    #         return PConstraint(0,1)
-    #     elif not c and a in self.witness_cache[0]:
-    #             return self.witness_cache[1][self.witness_cache[0].index(a)]
-    #     elif isinstance(a,HypObj) and show(self) in showall(a.types):
-    #             return PConstraint(1)
-    #     elif isinstance(a,HypObj) and forsome(a.types,
-    #                                           lambda T: show(self) in showall(T.supertype_cache)):
-    #         return PConstraint(1)
-    #     elif isinstance(a, LazyObj):
-    #         if isinstance(a.eval(), LazyObj):
-    #             return a.eval().type().subtype_of(self)
-    #         else:
-    #             return self.query(a.eval(),c,oracle)
-    #     elif [i for i in filter(lambda x: isinstance(x,tuple),c)
-    #           if i[0]==a and i[1].subtype_of(self)]:
-    #         return PConstraint(1)
-    #     elif oracle and setres(oracle(a,self,c)):
-    #         return res
-    #        # res = oracle(a,self,c)
-    #        # if res:
-    #        #     return res
-    #        # else:
-    #        #     return self.query(a)
-    #         #     pass
-    #     elif self.witness_types:
-    #         ps = list(map(lambda T: T.in_poss(self.poss).query(a,c,oracle), self.witness_types))
-    #         res = PMax(ps)
-    #         if not isinstance(a,HypObj):
-    #             self.witness_cache[0].append(a)
-    #             self.witness_cache[1].append(res)
-    #         return res
-    #     elif self.witness_conditions:
-    #         ps = list(map(lambda f: apply123(f,a,c,oracle), self.witness_conditions))
-    #         res = PMax(ps)
-    #         if not isinstance(a,HypObj):
-    #             self.witness_cache[0].append(a)
-    #             self.witness_cache[1].append(res)
-    #         if res.min == 0 and res.max == 1 and (c or oracle):
-    #             return self.query(a)
-    #         else:
-    #             return res
-    #         # else:
-    #         #     return self.query(a)
-    #     # else:
-    #     #     return self.query(a)
-    #     else:
-    #         if c or oracle:
-    #             return self.query(a)
-    #         else:
-    #             return PConstraint(0,1)
+
     def query(self, a,c=None,oracle=None):
         if c is None:
             c = []
-        if ttracing('query'):
-            print('query args: ',show([self,a,c,oracle]))
+        trace('query', 'query args: ', show([self,a,c,oracle]))
         if check_stack('query',dict(a=a,c=c,oracle=oracle,self=self)):
             return PConstraint(0,1)
         for m in self._query_methods:
@@ -145,7 +88,6 @@ class TypeClass(ttrtypes.TypeClass):
             return PConstraint(0,1)
     def _query_witness_cache(self,a,c,oracle):
         if not c and a in self.witness_cache[0]:
-            #print(show(self),show(self.witness_cache))
             return self.witness_cache[1][self.witness_cache[0].index(a)]
     def _query_hypobj(self,a,c,oracle):
         if isinstance(a,HypObj) and (next(filter(lambda T: equal(T,self), a.types),None) or
@@ -166,25 +108,15 @@ class TypeClass(ttrtypes.TypeClass):
     def _query_oracle(self,a,c,oracle):
         if oracle:
             return oracle(a,self,c)
-            # if res and (res.min>0 or res.max<1):
-            #     return res
     def _query_witness_types(self,a,c,oracle):
         if self.witness_types:
             ps = list(map(lambda T: T.in_poss(self.poss).query(a,c,oracle), self.witness_types))
             res = PMax(ps)
-            #if res and (res.min>0 or res.max<1):
-                # if not isinstance(a,HypObj):
-                #     self.witness_cache[0].append(a)
-                #     self.witness_cache[1].append(res)
             return res
     def _query_witness_conditions(self,a,c,oracle):
         if self.witness_conditions:
             ps = list(map(lambda f: apply123(f,a,c,oracle), self.witness_conditions))
             res = PMax(ps)
-            #if res and (res.min>0 or res.max>1):
-                # if not isinstance(a,HypObj):
-                #     self.witness_cache[0].append(a)
-                #     self.witness_cache[1].append(res)
             return res
     def forget(self,a):
         if a in self.witness_cache[0]:
@@ -204,7 +136,6 @@ class TypeClass(ttrtypes.TypeClass):
                 for x in cond[1].sample():
                     if (x,self) not in js:
                         js.append((x,self))
-        #[(x,self) for x in self.witness_cache[0] if self.witness_cache[1][self.witness_cache[0].index(x)].max>0]
         p_nonspec = self.prob_nonspec
         if not c:
             if p_nonspec:
@@ -236,7 +167,6 @@ class TypeClass(ttrtypes.TypeClass):
                 if oracle_nonspec:
                     return oracle_nonspec
                 elif self.witness_cache[0]:
-                    #print('js: ',show(js))
                     return DisjProb(js,c,oracle)
                 else:
                     return PConstraint(0,1)
@@ -259,8 +189,7 @@ class TypeClass(ttrtypes.TypeClass):
                     samples.append(a)
         return PExtreme([self.query(a,[(a,T) for T in c],oracle) for a in samples])
     def subtype_of(self,T):
-        if ttracing('subtype_of'):
-            print('subtype_of args: ',show([self,T]))
+        trace('subtype_of', 'subtype_of args: ', show([self,T]))
         if T in self.supertype_cache: 
             return True
         elif equal(self,T):

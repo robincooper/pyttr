@@ -12,13 +12,12 @@ from .ttrtypes import (
     HypObj,
     LazyObj,
     Pred,
-    _M,
-    add_to_model,
     equal,
     logtype,
     logtype_t,
 )
 from .utils import apply123, check_stack, forsome, gensym, show, showall, substitute, ttracing
+from .probabilistic.model import _M, add_to_model
 from .prob_constraints import (
     ConjProb,
     DisjProb,

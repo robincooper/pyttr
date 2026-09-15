@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 PYTHON_GLOBS = (
     "*.py",
-    "src/pyttr/*.py",
+    "src/pyttr/**/*.py",
     "tests/*.py",
     "scripts/*.py",
 )
@@ -82,6 +82,9 @@ def ast_parse() -> None:
 def import_check() -> None:
     code = """
 import pyttr.compound_types
+import pyttr.core
+import pyttr.categorical
+import pyttr.probabilistic
 import pyttr.model
 import pyttr.prelude
 import pyttr.prob_compound_types
@@ -109,6 +112,8 @@ from pyttr.ttrtypes import BType, RecType
 
 assert pyttr.__all__ == ()
 assert ttrtypes.RecType is ModuleRecType
+assert pyttr.categorical.RecType is ModuleRecType
+assert pyttr.probabilistic.RecType is ProbRecType
 assert probttrtypes.RecType is ProbRecType
 assert ttrtypes.RecType is not probttrtypes.RecType
 for name in ("Type", "BType", "PType", "RecType", "Fun"):
@@ -192,6 +197,9 @@ import os
 from pathlib import Path
 
 import pyttr
+import pyttr.core
+import pyttr.categorical
+import pyttr.probabilistic
 import pyttr.prob_constraints
 import pyttr.prob_record_types
 import pyttr.prob_type_core
@@ -207,6 +215,8 @@ installed_from = Path(pyttr.__file__).resolve()
 assert original_root not in installed_from.parents, installed_from
 assert pyttr.__all__ == ()
 assert ttrtypes.RecType is ModuleRecType
+assert pyttr.categorical.RecType is ModuleRecType
+assert pyttr.probabilistic.RecType is ProbRecType
 assert probttrtypes.RecType is ProbRecType
 assert ttrtypes.RecType is not probttrtypes.RecType
 for name in ("Type", "BType", "PType", "RecType", "Fun"):

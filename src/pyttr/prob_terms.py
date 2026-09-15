@@ -1,22 +1,8 @@
-from . import ttrtypes
-from .utils import show
+"""Compatibility exports; implementation lives in :mod:`pyttr.probabilistic.terms`."""
 
-class Possibility(ttrtypes.Possibility):
-    def show(self):
-        return '\n'+self.name + ':\n'+'_'*45 +'\n'+ '\n'.join([show(i)+': '+show(list(zip(self.model[i].witness_cache[0],self.model[i].witness_cache[1]))) for i in self.model])+'\n'+'_'*45+'\n'
+from .probabilistic.terms import (
+    Possibility,
+    Fun,
+)
 
-class Fun(ttrtypes.Fun):
-    def matches(self,poss,n,vs=None,vartypes=None,varvalues=None):
-        if vs is None:
-            vs = []
-        if vartypes is None:
-            vartypes = []
-        if varvalues is None:
-            varvalues = []
-        return self.body.matches(poss,n,vs+[self.var],vartypes+[self.domain_type],varvalues+[None])
-
-
-__all__ = [
-    "Possibility",
-    "Fun",
-]
+__all__ = ['Possibility', 'Fun']

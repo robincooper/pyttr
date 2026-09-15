@@ -54,7 +54,10 @@ make fresh-install
 
 ## Layout
 
-- `src/pyttr/`: canonical package code
+- `src/pyttr/core/`: shared records, terms, type structure, and model infrastructure
+- `src/pyttr/categorical/`: categorical TTR implementation and public API
+- `src/pyttr/probabilistic/`: probabilistic TTR implementation and public API
+- remaining modules in `src/pyttr/`: shared utilities and compatibility exports
 - `tests/`: regression, example, and notebook execution tests
 - `example-*.py` and `*.ipynb`: existing example material
 - top-level `records.py`, `ttrtypes.py`, `probttrtypes.py`, `utils.py`, and
@@ -62,30 +65,77 @@ make fresh-install
 
 ## Public API
 
-Use explicit module-qualified imports. Deterministic TTR objects are available
-from `pyttr.ttrtypes` and its smaller implementation modules:
+Choose the semantic API explicitly. The public record-type name remains
+`RecType` in both APIs. For categorical TTR:
 
 ```python
-from pyttr.ttrtypes import RecType
-from pyttr.record_types import RecType
+from pyttr.categorical import BType, Rec, RecType
+
+Ind = BType("Ind")
+Ind.judge("j")
+person = RecType({"x": Ind})
+assert person.query(Rec({"x": "j"})) is True
 ```
 
-Probabilistic TTR objects are available from `pyttr.probttrtypes` and its
-smaller implementation modules:
+For probabilistic TTR:
 
 ```python
-from pyttr.probttrtypes import RecType
-from pyttr.prob_record_types import RecType
+from pyttr.probabilistic import BType, Rec, RecType
+
+Ind = BType("Ind")
+Ind.judge("j", 0.6, 0.8)
+person = RecType({"x": Ind})
+probability = person.query(Rec({"x": "j"}))
+assert (probability.min, probability.max) == (0.6, 0.8)
 ```
 
 The package root intentionally does not re-export names such as `Type`,
 `BType`, `PType`, `RecType`, or `Fun`, because those names can have different
-meanings in deterministic, probabilistic, and future alternative modules.
+meanings in categorical and probabilistic TTR. Shared record values are also
+available as `from pyttr.core import Rec`.
+
+Each semantic API has a separate default model, so categorical `BType("Ind")`
+and probabilistic `BType("Ind")` can coexist without sharing evidence. Use
+`Possibility` and the `poss=` argument for explicit models. Each API's
+`initmodel()` clears its own default model. Types from different semantic
+families with the same name cannot be registered in the same explicit model.
+
+Existing imports such as `pyttr.ttrtypes`, `pyttr.probttrtypes`,
+`pyttr.record_types`, and `pyttr.prob_record_types` remain compatibility exports
+of the same objects. Top-level notebook imports such as `import ttrtypes` also
+continue to work. The legacy `ttrtypes.initmodel()` and `pyttr.model.initmodel()`
+clear all loaded default models, preserving the old global-reset workflow.
+
+## Implementation boundaries
+
+Both semantic implementations inherit from the abstract `core.TypeClass`.
+They define judgment, querying, witness creation, possibility assignment, and
+subtyping, including their own witness-cache formats. Categorical queries
+retain their existing Boolean and legacy sentinel results; probabilistic
+queries retain `PConstraint` probability intervals.
+
+Shared record and compound structure lives in core bases such as
+`RecTypeStructure`, `MeetTypeStructure`, and `PTypeClassStructure`. They provide
+field traversal, display, substitution, and structural algorithms, delegating
+semantic operations to concrete types. New objects created by nesting,
+substitution, or merging preserve the semantic implementation. Shared term
+operations likewise preserve probabilistic `Fun` objects and their matching
+support.
+
+Core imports neither semantic package; neither semantic package imports the
+other or the legacy compatibility facades. The tests check these import
+boundaries in fresh Python processes.
+
+This refactor preserves the existing feature sets: probabilistic function,
+list, and singleton types are still unimplemented. SPA encoding remains future
+work; it can consume these TTR objects through an encoder/model layer.
+
+## Records
 
 `Rec` values store user labels in the `fields` mapping. Attribute access such
 as `record.x` is still supported for compatibility, but labels no longer live
 directly in the instance `__dict__`, so they cannot overwrite methods like
 `show()` or `pathvalue()`.
 
-The first cleanup pass focuses on compatibility-safe modernization: packaging
-metadata, basic regression tests, mutable-default cleanup, and warning fixes.
+The verification suite covers both semantic APIs, compatibility imports,
+structural operations, examples, and notebook execution.

@@ -19,9 +19,15 @@ dev = [
   "nbclient",
   "nbformat",
   "pytest",
+  "torch>=2.0",
+  "torchhd>=5.8",
 ]
 notebooks = [
   "jupyterlab",
+]
+spa = [
+  "torch>=2.0",
+  "torchhd>=5.8",
 ]
 
 [tool.setuptools]

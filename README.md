@@ -15,6 +15,13 @@ the cleanup proceeds.
 Notebook work can also use JupyterLab via the optional `notebooks` dependency
 group.
 
+SPA-TTR experiments use the optional `spa` dependency group, which installs
+PyTorch and TorchHD:
+
+```sh
+python -m pip install -e ".[spa]"
+```
+
 ## Development
 
 Install the project in editable mode with development dependencies:
@@ -57,6 +64,7 @@ make fresh-install
 - `src/pyttr/core/`: shared records, terms, type structure, and model infrastructure
 - `src/pyttr/categorical/`: categorical TTR implementation and public API
 - `src/pyttr/probabilistic/`: probabilistic TTR implementation and public API
+- `src/pyttr/spa/`: Semantic Pointer Architecture encodings of TTR objects
 - remaining modules in `src/pyttr/`: shared utilities and compatibility exports
 - `tests/`: regression, example, and notebook execution tests
 - `example-*.py` and `notebooks/`: example material
@@ -109,6 +117,12 @@ clear all loaded default models, preserving the old global-reset workflow.
 The notebooks use the explicit semantic APIs above: `pyttr.categorical` for
 categorical TTR, `pyttr.probabilistic` for probabilistic TTR, and `pyttr.core`
 for shared record structures.
+
+SPA is an encoding layer over these TTR objects, rather than a third TTR
+semantics. Use `pyttr.spa.Codebook` and `pyttr.spa.Encoder` to produce TorchHD
+hypervectors. `Codebook(..., vsa="MAP")` forwards the VSA model choice to
+TorchHD; see `notebooks/spa-ttr-merge.ipynb` for the record-type merge example
+from *TTR at the SPA*.
 
 ## Implementation boundaries
 

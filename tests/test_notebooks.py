@@ -8,10 +8,22 @@ from nbclient import NotebookClient
 
 
 ROOT = Path(__file__).resolve().parents[1]
-NOTEBOOKS = sorted(ROOT.glob("*.ipynb"))
+NOTEBOOKS = sorted((ROOT / "notebooks").glob("*.ipynb"))
 
 
 class NotebookTests(unittest.TestCase):
+    def test_notebooks_use_public_apis(self):
+        legacy_imports = (
+            "from pyttr.ttrtypes import",
+            "from pyttr.probttrtypes import",
+            "from pyttr.records import",
+        )
+        for path in NOTEBOOKS:
+            with self.subTest(notebook=path.name):
+                source = path.read_text(encoding="utf-8")
+                for legacy_import in legacy_imports:
+                    self.assertNotIn(legacy_import, source)
+
     def test_notebooks_execute(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             previous_ipython_dir = os.environ.get("IPYTHONDIR")

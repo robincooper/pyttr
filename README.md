@@ -2,9 +2,9 @@
 
 `pyttr2` is a cleanup branch of the Python implementation of Type Theory with
 Records (TTR). The core implementation now lives in the `pyttr` package under
-`src/`, with top-level compatibility modules kept so the older examples and
-notebooks can continue to import `ttrtypes`, `records`, `utils`, and related
-modules while the cleanup proceeds.
+`src/`, with top-level compatibility modules kept so older user code can
+continue to import `ttrtypes`, `records`, `utils`, and related modules while
+the cleanup proceeds.
 
 ## Requirements
 
@@ -59,7 +59,7 @@ make fresh-install
 - `src/pyttr/probabilistic/`: probabilistic TTR implementation and public API
 - remaining modules in `src/pyttr/`: shared utilities and compatibility exports
 - `tests/`: regression, example, and notebook execution tests
-- `example-*.py` and `*.ipynb`: existing example material
+- `example-*.py` and `notebooks/`: example material
 - top-level `records.py`, `ttrtypes.py`, `probttrtypes.py`, `utils.py`, and
   `config.py`: compatibility wrappers for legacy imports
 
@@ -105,6 +105,10 @@ Existing imports such as `pyttr.ttrtypes`, `pyttr.probttrtypes`,
 of the same objects. Top-level notebook imports such as `import ttrtypes` also
 continue to work. The legacy `ttrtypes.initmodel()` and `pyttr.model.initmodel()`
 clear all loaded default models, preserving the old global-reset workflow.
+
+The notebooks use the explicit semantic APIs above: `pyttr.categorical` for
+categorical TTR, `pyttr.probabilistic` for probabilistic TTR, and `pyttr.core`
+for shared record structures.
 
 ## Implementation boundaries
 

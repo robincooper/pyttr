@@ -9,9 +9,10 @@ from .type_core import Type, TypeClass, BType, BTypeClass
 from .predicates import PType, PTypeClass
 from .record_types import RecType
 from .compound_types import MeetType, JoinType, NegType, VarType
-from .constraints import PConstraint
+from .constraints import DisjProb, PConstraint, PDiv, PExtreme, PTimes
 
 __all__ = ['Rec', 'Type', 'TypeClass', 'BType', 'BTypeClass', 'Pred', 'PType',
     'PTypeClass', 'RecType', 'MeetType', 'JoinType', 'NegType', 'VarType',
-    'PConstraint', 'Fun', 'HypObj', 'LazyObj', 'AbsPath', 'Possibility',
+    'PConstraint', 'PDiv', 'PExtreme', 'PTimes', 'DisjProb', 'Fun', 'HypObj',
+    'LazyObj', 'AbsPath', 'Possibility',
     'initmodel', 'showmodel', 'equal', 'show', 'to_latex', 'ttracing']

@@ -9,7 +9,13 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from pyttr import categorical as cat
-from pyttr.spa import Codebook, Encoder
+from pyttr.spa import (
+    AssociativeMemory,
+    Codebook,
+    Encoder,
+    QuestionEncoder,
+    WitnessCache,
+)
 
 
 class SPAEncodingTests(unittest.TestCase):
@@ -69,6 +75,91 @@ class SPAEncodingTests(unittest.TestCase):
             self.encoder.similarity(merged_pointer, self.encoder.encode(run_type)),
             self.encoder.similarity(merged_pointer, self.encoder.encode(unrelated)),
         )
+
+    def qa_model(self):
+        ind = cat.BType("Ind")
+        chase = cat.Pred("chase", [ind, ind])
+        see = cat.Pred("see", [ind, ind])
+        like = cat.Pred("like", [ind, ind])
+        question_encoder = QuestionEncoder(
+            Codebook(dimensions=10_000, vsa="HRR", seed=7)
+        )
+        memory = AssociativeMemory(question_encoder)
+        propositions = {
+            "p1": cat.PType(chase, ["dog", "cat"]),
+            "p2": cat.PType(chase, ["dog", "cow"]),
+            "p3": cat.PType(see, ["dog", "mouse"]),
+            "p4": cat.PType(see, ["mouse", "cow"]),
+            "p5": cat.PType(like, ["cat", "mouse"]),
+            "p6": cat.PType(like, ["dog", "cow"]),
+        }
+        for label, proposition in propositions.items():
+            memory.add(label, proposition)
+        return ind, chase, like, question_encoder, memory
+
+    def test_question_application_matches_categorical_ttr(self):
+        ind, chase, _, question_encoder, _ = self.qa_model()
+        question = cat.Fun("v", ind, cat.PType(chase, ["dog", "v"]))
+        categorical_result = question.app("cat")
+        encoded_question = question_encoder.encode(question)
+        spa_result = question_encoder.apply(encoded_question, "cat")
+        expected = question_encoder.encode_proposition(categorical_result)
+        unrelated = question_encoder.encode_proposition(cat.PType(chase, ["cat", "dog"]))
+
+        self.assertEqual(categorical_result.show(), "chase(dog, cat)")
+        self.assertGreater(
+            question_encoder.encoder.similarity(spa_result, expected),
+            question_encoder.encoder.similarity(spa_result, unrelated),
+        )
+
+    def test_question_extraction_and_associative_memory(self):
+        ind, chase, like, question_encoder, memory = self.qa_model()
+        candidates = ("dog", "cat", "cow", "mouse")
+
+        cat_likes = question_encoder.encode(
+            cat.Fun("v", ind, cat.PType(like, ["cat", "v"]))
+        )
+        match, answer, scores = memory.answer(cat_likes, candidates)
+        self.assertEqual(match.label, "p5")
+        self.assertEqual(answer, "mouse")
+        self.assertEqual(scores[0][0], "mouse")
+
+        dog_chases = question_encoder.encode(
+            cat.Fun("v", ind, cat.PType(chase, ["dog", "v"]))
+        )
+        ranked = memory.ranked_propositions(dog_chases)
+        self.assertEqual({label for label, _ in ranked[:2]}, {"p1", "p2"})
+        match, answer, _ = memory.answer(dog_chases, candidates)
+        self.assertIn(match.label, {"p1", "p2"})
+        self.assertIn(answer, {"cat", "cow"})
+
+        likes_cow = question_encoder.encode(
+            cat.Fun("v", ind, cat.PType(like, ["v", "cow"]))
+        )
+        match, answer, scores = memory.answer(likes_cow, candidates)
+        self.assertEqual(match.label, "p6")
+        self.assertEqual(answer, "dog")
+        self.assertEqual(scores[0][0], "dog")
+
+    def test_witness_cache_supports_basic_type_judgements(self):
+        ind = cat.BType("Ind")
+        color = cat.BType("Color")
+        for vsa in ("BSC", "MAP", "HRR", "FHRR"):
+            with self.subTest(vsa=vsa):
+                cache = WitnessCache(Codebook(dimensions=10_000, vsa=vsa, seed=7))
+                cache.judge("alice", ind)
+                cache.judge("bob", ind)
+                cache.judge("red", color)
+
+                alice_score = cache.query("alice", ind)
+                self.assertGreater(alice_score, cache.query("carol", ind))
+                self.assertGreater(alice_score, cache.query("red", ind))
+                self.assertTrue(cache.judges("alice", ind, threshold=0.1))
+                self.assertFalse(cache.judges("carol", ind, threshold=0.1))
+                self.assertEqual(
+                    {witness for witness, _ in cache.members(ind)}, {"alice", "bob"}
+                )
+                self.assertEqual(cache.members(color)[0][0], "red")
 
 
 if __name__ == "__main__":

@@ -120,9 +120,10 @@ for shared record structures.
 
 SPA is an encoding layer over these TTR objects, rather than a third TTR
 semantics. Use `pyttr.spa.Codebook` and `pyttr.spa.Encoder` to produce TorchHD
-hypervectors. `Codebook(..., vsa="MAP")` forwards the VSA model choice to
-TorchHD; see `notebooks/spa-ttr-merge.ipynb` for the record-type merge example
-from *TTR at the SPA*.
+hypervectors; `WitnessCache` provides cache-based evidence for basic type
+judgements. `Codebook(..., vsa="MAP")` forwards the VSA model choice to
+TorchHD; see `notebooks/spa-ttr.ipynb` for basic witness-cache judgements,
+record-type merge, and question answering based on the two SPA-TTR papers.
 
 ## Implementation boundaries
 

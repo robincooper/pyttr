@@ -19,6 +19,12 @@ class PackageImportTests(unittest.TestCase):
         self.assertEqual(probttrtypes.PConstraint(1).show(), "1.0")
         self.assertEqual(utils.show("a"), "a")
 
+    def test_latex_renders_underscore_numeric_suffixes_as_subscripts(self):
+        from pyttr.utils import to_latex
+
+        self.assertEqual(to_latex("c_1"), r"\text{c}_{\text{1}}")
+        self.assertEqual(to_latex("c_1", vars=["c_1"]), r"c_{1}")
+
     def test_split_ttrtype_modules_import(self):
         from pyttr.compound_types import FunType
         from pyttr.model import Possibility

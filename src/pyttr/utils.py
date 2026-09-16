@@ -77,18 +77,24 @@ def to_latex(obj,vars=None,italic=None,anglebrackets=None):
     if vars is None:
         vars = []
     if isinstance(obj,str):
-        subscript = re.search(r'\d+$',obj)
+        # Match an underscore-prefixed numeric suffix before a bare numeric
+        # suffix, so ``c_1`` becomes ``c_{1}`` rather than ``c__{1}``.
+        subscript = re.search(r'_\d+$',obj)
+        if not subscript:
+            subscript = re.search(r'\d+$',obj)
         if not subscript:
             subscript = re.search(r'_\D+$',obj)
         if subscript:
             start = subscript.start()
+            base = obj[:start]
+            suffix = obj[start:].removeprefix('_')
             if obj in vars:
-                return obj[:start]+'_{'+obj[start:]+'}'
+                return base+'_{'+suffix+'}'
             else:
                 if italic:
-                    return '\\textit{'+obj[:start]+'}_{\\textit{'+obj[start:].replace('_','')+'}}'
+                    return '\\textit{'+base+'}_{\\textit{'+suffix+'}}'
                 else:
-                    return '\\text{'+obj[:start]+'}_{\\text{'+obj[start:].replace('_','')+'}}'
+                    return '\\text{'+base+'}_{\\text{'+suffix+'}}'
         else:
             if obj in vars:
                 return obj

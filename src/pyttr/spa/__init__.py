@@ -6,7 +6,7 @@ define another family of TTR types: construct types through
 """
 
 from .encoding import Codebook, Encoder
-from .judgements import WitnessCache
+from .judgements import SPAModel, WitnessCache
 from .memory import AssociativeMemory, MemoryMatch
 from .questions import EncodedQuestion, QuestionEncoder
 
@@ -17,5 +17,6 @@ __all__ = [
     "Encoder",
     "MemoryMatch",
     "QuestionEncoder",
+    "SPAModel",
     "WitnessCache",
 ]

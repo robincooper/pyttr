@@ -13,6 +13,15 @@ from pyttr.records import Rec
 
 
 class RecordTypeBehaviorTests(unittest.TestCase):
+    def test_nested_record_types_can_be_folded(self):
+        nested = ttr.RecType({"object": ttr.RecType({"id": ttr.BType("Ind")})})
+
+        self.assertEqual(nested.show(max_record_depth=1), "{object : {...}}")
+        self.assertIn(
+            r"\text{object} &:& \left[\cdots\right]",
+            nested.to_latex(vars=[], max_record_depth=1),
+        )
+
     def setUp(self):
         ttr.initmodel()
 

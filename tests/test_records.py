@@ -9,7 +9,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from pyttr.records import Rec
-from pyttr.utils import show
+from pyttr.utils import show, to_latex
 
 
 class RecTests(unittest.TestCase):
@@ -23,6 +23,31 @@ class RecTests(unittest.TestCase):
         rec = Rec({"f": {"g": "a"}, "h": "b"})
 
         self.assertEqual(show(rec.subst("a", "z")), "{f = {g = z}, h = b}")
+
+    def test_nested_records_can_be_folded_at_a_selected_depth(self):
+        rec = Rec({"object": {"id": "a", "data": {"f1": 0.25, "f2": 0.5}}})
+
+        self.assertEqual(
+            show(rec, max_record_depth=1),
+            "{object = {...}}",
+        )
+        self.assertEqual(
+            show(rec, max_record_depth=2),
+            "{object = {id = a, data = {...}}}",
+        )
+        self.assertIn(
+            r"\text{data} &=& \left[\cdots\right]",
+            to_latex(rec, max_record_depth=2),
+        )
+
+    def test_record_depth_limit_applies_through_collections(self):
+        rec = Rec({"evidence": (Rec({"f1": 0.25}),)})
+
+        self.assertEqual(show(rec, max_record_depth=1), "{evidence = ({...})}")
+
+    def test_record_depth_must_be_non_negative(self):
+        with self.assertRaisesRegex(ValueError, "max_record_depth"):
+            show(Rec(), max_record_depth=-1)
 
     def test_flatten_and_unflatten_round_trip(self):
         rec = Rec({"f": {"g": "a"}, "h": "b"})

@@ -66,26 +66,38 @@ class Encoder:
         their internal structure. Basic types and otherwise atomic TTR types
         receive a stable codebook pointer.
         """
+        return self._encode(value, bound_variables=frozenset())
+
+    def _encode(self, value, *, bound_variables: frozenset[str]):
         if isinstance(value, RecTypeStructure):
-            return self.encode_record_type(value)
+            return self.encode_record_type(value, bound_variables=bound_variables)
         if isinstance(value, PTypeClassStructure):
-            return self._encode_predicate_type(value)
+            return self._encode_predicate_type(value, bound_variables=bound_variables)
         if isinstance(value, Fun):
-            return self._encode_function(value)
+            return self._encode_function(value, bound_variables=bound_variables)
         if isinstance(value, Pred):
             return self.codebook.pointer_for(f"predicate:{value.name}")
         if isinstance(value, tuple):
-            return self._encode_dependent_field(value)
+            return self._encode_dependent_field(value, bound_variables=bound_variables)
         if isinstance(value, str):
-            return self.codebook.pointer_for(f"variable:{value}")
+            namespace = "variable" if value in bound_variables else "entity"
+            return self.codebook.pointer_for(f"{namespace}:{value}")
         if isinstance(value, TypeClass):
             return self.codebook.pointer_for(f"type:{value.show()}")
         raise TypeError(f"cannot encode {type(value).__name__}")
 
-    def encode_record_type(self, record_type: RecTypeStructure):
+    def encode_record_type(
+        self,
+        record_type: RecTypeStructure,
+        *,
+        bound_variables: frozenset[str] = frozenset(),
+    ):
         """Encode a record type as label--type bindings in superposition."""
         fields = [
-            self.bind(self.codebook.pointer_for(f"label:{label}"), self.encode(field))
+            self.bind(
+                self.codebook.pointer_for(f"label:{label}"),
+                self._encode(field, bound_variables=bound_variables),
+            )
             for label, field in record_type.comps.items()
         ]
         return self.bundle(fields)
@@ -112,7 +124,9 @@ class Encoder:
         """Return cosine similarity between two semantic pointers."""
         return float(torchhd.cosine_similarity(left, right).item())
 
-    def _encode_predicate_type(self, predicate_type: PTypeClassStructure):
+    def _encode_predicate_type(
+        self, predicate_type: PTypeClassStructure, *, bound_variables: frozenset[str]
+    ):
         predicate = predicate_type.comps.pred
         fields = [
             self.bind(
@@ -124,12 +138,12 @@ class Encoder:
             fields.append(
                 self.bind(
                     self.codebook.pointer_for(f"role:argument:{index}"),
-                    self.encode(argument),
+                    self._encode(argument, bound_variables=bound_variables),
                 )
             )
         return self.bundle(fields)
 
-    def _encode_function(self, function: Fun):
+    def _encode_function(self, function: Fun, *, bound_variables: frozenset[str]):
         return self.bundle(
             (
                 self.bind(
@@ -138,16 +152,19 @@ class Encoder:
                 ),
                 self.bind(
                     self.codebook.pointer_for("role:domain"),
-                    self.encode(function.domain_type),
+                    self._encode(function.domain_type, bound_variables=bound_variables),
                 ),
                 self.bind(
                     self.codebook.pointer_for("role:body"),
-                    self.encode(function.body),
+                    self._encode(
+                        function.body,
+                        bound_variables=bound_variables | {function.var},
+                    ),
                 ),
             )
         )
 
-    def _encode_dependent_field(self, field: tuple):
+    def _encode_dependent_field(self, field: tuple, *, bound_variables: frozenset[str]):
         if len(field) != 2 or not isinstance(field[1], list):
             raise TypeError("dependent fields must be (function, labels) pairs")
         function, labels = field
@@ -158,7 +175,7 @@ class Encoder:
             (
                 self.bind(
                     self.codebook.pointer_for("role:dependent-function"),
-                    self.encode(function),
+                    self._encode(function, bound_variables=bound_variables),
                 ),
                 self.bind(
                     self.codebook.pointer_for("role:dependencies"), dependencies

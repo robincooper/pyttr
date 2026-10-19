@@ -14,8 +14,10 @@ from pyttr.spa import (
     Codebook,
     Encoder,
     QuestionEncoder,
+    SPAModel,
     WitnessCache,
 )
+from pyttr.records import Rec
 
 
 class SPAEncodingTests(unittest.TestCase):
@@ -36,6 +38,23 @@ class SPAEncodingTests(unittest.TestCase):
     def test_codebook_is_stable_within_an_encoder(self):
         pointer = self.encoder.codebook.pointer_for("label:x")
         self.assertIs(pointer, self.encoder.codebook.pointer_for("label:x"))
+
+    def test_entity_encoding_is_shared_by_witnesses_and_predicate_arguments(self):
+        ind = cat.BType("Ind")
+        man = cat.Pred("man", [ind])
+        model = SPAModel(self.encoder.codebook)
+        model.judge("alice", ind)
+
+        self.assertIs(
+            self.encoder.encode("alice"),
+            self.encoder.codebook.pointer_for("entity:alice"),
+        )
+        self.assertIn("entity:alice", self.encoder.codebook._pointers)
+        self.encoder.encode(cat.PType(man, ["alice"]))
+        self.assertNotIn("variable:alice", self.encoder.codebook._pointers)
+        self.encoder.encode(cat.Fun("v", ind, cat.PType(man, ["v"])))
+        self.assertIn("variable:v", self.encoder.codebook._pointers)
+        self.assertNotIn("entity:v", self.encoder.codebook._pointers)
 
     def test_merge_encoding_works_across_vsa_models(self):
         ind, man_type, run_type = self.record_type_parts()
@@ -160,6 +179,29 @@ class SPAEncodingTests(unittest.TestCase):
                     {witness for witness, _ in cache.members(ind)}, {"alice", "bob"}
                 )
                 self.assertEqual(cache.members(color)[0][0], "red")
+
+    def test_spa_model_resolves_dependent_predicate_fields(self):
+        ind = cat.BType("Ind")
+        man = cat.Pred("man", [ind])
+        record_type = cat.RecType({
+            "x": ind,
+            "c_man": (cat.Fun("v", ind, cat.PType(man, ["v"])), ["x"]),
+        })
+        model = SPAModel(Codebook(dimensions=10_000, vsa="HRR", seed=7))
+        model.judge("alice", ind)
+        model.judge("e_alice_man", cat.PType(man, ["alice"]))
+
+        valid = Rec({"x": "alice", "c_man": "e_alice_man"})
+        wrong_dependency = Rec({"x": "bob", "c_man": "e_alice_man"})
+        missing_field = Rec({"x": "alice"})
+
+        self.assertGreater(model.query(valid, record_type), 0.1)
+        self.assertTrue(model.judges(valid, record_type))
+        self.assertFalse(model.judges(wrong_dependency, record_type))
+        self.assertFalse(model.judges(missing_field, record_type))
+        self.assertEqual(
+            model.witness_cache.query(valid, record_type), model.query(valid, record_type)
+        )
 
 
 if __name__ == "__main__":

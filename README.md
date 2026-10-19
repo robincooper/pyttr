@@ -178,5 +178,24 @@ as `record.x` is still supported for compatibility, but labels no longer live
 directly in the instance `__dict__`, so they cannot overwrite methods like
 `show()` or `pathvalue()`.
 
+Nested records can be folded for compact text or LaTeX output by setting
+`max_record_depth` on `show()`, `to_latex()`, or the corresponding record
+methods. The top-level record has depth zero, so a limit of two keeps one
+nested record visible and folds its record-valued fields:
+
+```python
+from pyttr.categorical import Rec, show, to_latex
+
+h_data = Rec({"object": {"id": "a", "data": {"f1": 0.25, "f2": 0.5}}})
+assert show(h_data, max_record_depth=2) == (
+    "{object = {id = a, data = {...}}}"
+)
+latex = to_latex(h_data, max_record_depth=2)
+```
+
+The default `None` retains the complete representation. The same option works
+for nested `RecType` values and propagates through lists, tuples, sets, and
+dictionaries containing records.
+
 The verification suite covers both semantic APIs, compatibility imports,
 structural operations, examples, and notebook execution.

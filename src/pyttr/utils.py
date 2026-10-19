@@ -56,26 +56,53 @@ def forsome(list,cond):
     else:
         return forsome(list[1:],cond)
     
-def show(obj):
+def _validate_max_record_depth(max_record_depth):
+    if max_record_depth is not None and (
+        not isinstance(max_record_depth, int) or max_record_depth < 0
+    ):
+        raise ValueError("max_record_depth must be a non-negative integer or None")
+
+
+def show(obj, max_record_depth=None):
+    """Render an object, optionally folding records beyond a nesting depth."""
+    _validate_max_record_depth(max_record_depth)
+    return _show(obj, max_record_depth, 0)
+
+
+def _show(obj, max_record_depth, record_depth):
     if isinstance(obj,str):
         return obj
     elif isinstance(obj,list):
-        return '['+ ', '.join([show(x) for x in obj])+']'
+        return '['+ ', '.join([_show(x, max_record_depth, record_depth) for x in obj])+']'
     elif isinstance(obj,set):
-        return '{'+ ', '.join([show(x) for x in obj])+'}'
+        return '{'+ ', '.join([_show(x, max_record_depth, record_depth) for x in obj])+'}'
     elif isinstance(obj,tuple):
-        return '('+ ', '.join([show(x) for x in obj])+')'
+        return '('+ ', '.join([_show(x, max_record_depth, record_depth) for x in obj])+')'
     elif isinstance(obj,dict):
-        return '{'+', '.join([show(i[0])+' = '+show(i[1]) for i in obj.items()])+'}'
+        return '{'+', '.join([
+            _show(i[0], max_record_depth, record_depth)+' = '
+            +_show(i[1], max_record_depth, record_depth)
+            for i in obj.items()
+        ])+'}'
+    elif hasattr(obj, '_show'):
+        return obj._show(max_record_depth, record_depth)
     elif hasattr(obj, 'show'):
         return obj.show()
     else:
         return str(obj)
         
 
-def to_latex(obj,vars=None,italic=None,anglebrackets=None):
+def to_latex(obj,vars=None,italic=None,anglebrackets=None,max_record_depth=None):
+    """Render LaTeX, optionally folding records beyond a nesting depth."""
     if vars is None:
         vars = []
+    _validate_max_record_depth(max_record_depth)
+    return _to_latex(
+        obj, vars, italic, anglebrackets, max_record_depth, 0
+    )
+
+
+def _to_latex(obj,vars,italic,anglebrackets,max_record_depth,record_depth):
     if isinstance(obj,str):
         # Match an underscore-prefixed numeric suffix before a bare numeric
         # suffix, so ``c_1`` becomes ``c_{1}`` rather than ``c__{1}``.
@@ -105,13 +132,31 @@ def to_latex(obj,vars=None,italic=None,anglebrackets=None):
                     return '\\text{'+obj+'}'
     elif isinstance(obj,list):
         if anglebrackets:
-           return '\\langle '+ ', '.join([to_latex(x,vars) for x in obj])+'\\rangle'
+           return '\\langle '+ ', '.join([
+               _to_latex(x, vars, None, None, max_record_depth, record_depth)
+               for x in obj
+           ])+'\\rangle'
         else:
-           return '[ '+ ', '.join([to_latex(x,vars) for x in obj])+']'
+           return '[ '+ ', '.join([
+               _to_latex(x, vars, None, None, max_record_depth, record_depth)
+               for x in obj
+           ])+']'
     elif isinstance(obj,tuple):
-        return '\\langle '+ ', '.join([to_latex(x,vars,italic,anglebrackets) for x in obj])+'\\rangle'
+        return '\\langle '+ ', '.join([
+            _to_latex(
+                x, vars, italic, anglebrackets, max_record_depth, record_depth
+            )
+            for x in obj
+        ])+'\\rangle'
     elif isinstance(obj,dict):
-        return '\\left\\{\\begin{array}{rcl}\n'+'\\\\\n'.join([to_latex(i[0],vars)+' &=& '+to_latex(i[1],vars) for i in obj.items()])+'\n\\end{array}\\right\\}'
+        return '\\left\\{\\begin{array}{rcl}\n'+'\\\\\n'.join([
+            _to_latex(i[0], vars, None, None, max_record_depth, record_depth)
+            +' &=& '
+            +_to_latex(i[1], vars, None, None, max_record_depth, record_depth)
+            for i in obj.items()
+        ])+'\n\\end{array}\\right\\}'
+    elif hasattr(obj, '_to_latex'):
+        return obj._to_latex(vars, max_record_depth, record_depth)
     elif hasattr(obj, 'to_latex'):
         return obj.to_latex(vars)
     else:

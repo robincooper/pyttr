@@ -4,7 +4,10 @@ from .records import Rec
 from .terms import AbsPath
 from .type_core import TypeClass, logtype, logtype_t
 from .type_ops import combine_dep_types, merge_dep_types, subtype_of_dep_types
-from ..utils import forall, forsome, show, substitute, to_latex, trace, trace_any, warn
+from ..utils import (
+    _show, _to_latex, forall, forsome, show, substitute, to_latex, trace,
+    trace_any, warn,
+)
 
 class RecTypeStructure:
     def __init__(self, d=None):
@@ -25,7 +28,12 @@ class RecTypeStructure:
                 depfields.addfield(label, field_type)
         return ProcessDepFields(depfields, res, self, mode)
 
-    def show(self):
+    def show(self, max_record_depth=None):
+        return show(self, max_record_depth=max_record_depth)
+
+    def _show(self, max_record_depth, record_depth):
+        if max_record_depth is not None and record_depth >= max_record_depth:
+            return "{...}"
         s = ""
         for kvp in self.comps.items():
             if s == "":
@@ -33,24 +41,28 @@ class RecTypeStructure:
             else:
                 s = s + ", "+kvp[0] + " : "
             
-            if(isinstance(kvp[1], RecTypeStructure)):
-                 s = s + kvp[1].show()                
-            else:
-                s = s + show(kvp[1]) 
+            s = s + _show(kvp[1], max_record_depth, record_depth + 1)
         return "{"+s+"}"
 
-    def to_latex(self,vars):
+    def to_latex(self,vars=None,max_record_depth=None):
+        return to_latex(self, vars=vars, max_record_depth=max_record_depth)
+
+    def _to_latex(self,vars,max_record_depth,record_depth):
+        if max_record_depth is not None and record_depth >= max_record_depth:
+            return "\\left[\\cdots\\right]"
         s = ""
         for kvp in self.comps.items():
             if s == "":
-                s = s + to_latex(kvp[0]) + " &:& "
+                s = s + _to_latex(
+                    kvp[0], [], None, None, max_record_depth, record_depth + 1
+                ) + " &:& "
             else:
-                s = s + "\\\\\n"+to_latex(kvp[0]) + " &:& "
-            
-            if(isinstance(kvp[1], RecTypeStructure)):
-                 s = s + kvp[1].to_latex(vars)                
-            else:
-                s = s + to_latex(kvp[1],vars,anglebrackets="yes") 
+                s = s + "\\\\\n"+_to_latex(
+                    kvp[0], [], None, None, max_record_depth, record_depth + 1
+                ) + " &:& "
+            s = s + _to_latex(
+                kvp[1], vars, None, "yes", max_record_depth, record_depth + 1
+            )
         return "\\left[\\begin{array}{lcl}\n"+s+"\n\\end{array}\\right]"
 
     def validate(self):

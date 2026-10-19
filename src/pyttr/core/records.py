@@ -1,5 +1,5 @@
 from collections import deque
-from ..utils import show, substitute, to_latex, trace, warn
+from ..utils import _show, _to_latex, show, substitute, to_latex, trace, warn
 
 _MISSING = object()
 
@@ -75,7 +75,12 @@ class Rec:
     def as_dict(self):
         return dict(self.fields)
             
-    def show(self):
+    def show(self, max_record_depth=None):
+        return show(self, max_record_depth=max_record_depth)
+
+    def _show(self, max_record_depth, record_depth):
+        if max_record_depth is not None and record_depth >= max_record_depth:
+            return "{...}"
         s = ""
         for kvp in self.fields.items():
             if s == "":
@@ -83,24 +88,28 @@ class Rec:
             else:
                 s = s + ", "+kvp[0] + " = "
             
-            if(isinstance(kvp[1], Rec)):
-                 s = s + kvp[1].show()                
-            else:
-                s = s + show(kvp[1]) 
+            s = s + _show(kvp[1], max_record_depth, record_depth + 1)
         return "{"+s+"}"
         
-    def to_latex(self,vars):
+    def to_latex(self,vars=None,max_record_depth=None):
+        return to_latex(self, vars=vars, max_record_depth=max_record_depth)
+
+    def _to_latex(self,vars,max_record_depth,record_depth):
+        if max_record_depth is not None and record_depth >= max_record_depth:
+            return "\\left[\\cdots\\right]"
         s = ""
         for kvp in self.fields.items():
             if s == "":
-                s = s + to_latex(kvp[0]) + " &=& "
+                s = s + _to_latex(
+                    kvp[0], [], None, None, max_record_depth, record_depth + 1
+                ) + " &=& "
             else:
-                s = s + "\\\\\n"+to_latex(kvp[0]) + " &=& "
-            
-            if(isinstance(kvp[1], Rec)):
-                 s = s + kvp[1].to_latex(vars)
-            else:
-                s = s + to_latex(kvp[1],vars)
+                s = s + "\\\\\n"+_to_latex(
+                    kvp[0], [], None, None, max_record_depth, record_depth + 1
+                ) + " &=& "
+            s = s + _to_latex(
+                kvp[1], vars, None, None, max_record_depth, record_depth + 1
+            )
                 
         return "\\left[\\begin{array}{rcl}\n"+s+"\n\\end{array}\\right]"
         

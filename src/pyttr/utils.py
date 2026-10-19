@@ -127,6 +127,11 @@ def show_latex(obj):
     if Latex is None:
         raise RuntimeError('IPython is required for show_latex()')
     return Latex(to_ipython_latex(obj))
+
+def show_interactive(obj, backend='inline'):
+    """Display an expandable record inline or in a separate window."""
+    from .interactive_display import show_interactive as display_record
+    return display_record(obj, backend=backend)
         
 def showall(objs):
     return [show(obj) for obj in objs]

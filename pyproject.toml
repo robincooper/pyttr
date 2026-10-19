@@ -14,6 +14,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+display = [
+  "PySide6",
+]
 dev = [
   "ipykernel",
   "nbclient",

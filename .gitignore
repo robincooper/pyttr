@@ -12,3 +12,5 @@ htmlcov/
 venv/
 dist/
 build/
+*.py#
+*.~1~

@@ -15,6 +15,28 @@ the cleanup proceeds.
 Notebook work can also use JupyterLab via the optional `notebooks` dependency
 group.
 
+Interactive record display can appear inline in a notebook or in a separate
+desktop window. The window backend requires the optional `display` dependency
+group:
+
+```sh
+python -m pip install -e ".[display]"
+```
+
+```python
+from pyttr.categorical import BType, RecType
+from pyttr.utils import show_interactive
+
+record_type = RecType({"x": BType("Ind"), "person": {"name": BType("Ind")}})
+show_interactive(record_type, backend="inline")   # notebook cell output
+show_interactive(record_type, backend="window")   # separate Qt window
+```
+
+Both views let you expand and collapse nested records with a click. LaTeX
+typesetting loads MathJax from the internet. The window backend requires a
+local desktop session; when called from a notebook, it enables Qt event-loop
+integration automatically.
+
 SPA-TTR experiments use the optional `spa` dependency group, which installs
 PyTorch and TorchHD:
 

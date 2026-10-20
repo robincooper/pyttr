@@ -28,12 +28,14 @@ from pyttr.categorical import BType, RecType
 from pyttr.utils import show_interactive
 
 record_type = RecType({"x": BType("Ind"), "person": {"name": BType("Ind")}})
-show_interactive(record_type, backend="inline")   # notebook cell output
-show_interactive(record_type, backend="window")   # separate Qt window
+show_interactive(record_type)                       # inline in a notebook; window otherwise
+show_interactive(record_type, backend="window")     # choose a window explicitly
 ```
 
-Both views let you expand and collapse nested records with a click. LaTeX
-typesetting loads MathJax from the internet. The window backend requires a
+Both views let you expand and collapse nested records with a click. Any object
+with a `to_latex()` method can also be displayed; other object types appear as
+a single rendered expression. LaTeX typesetting loads MathJax from the
+internet. The window backend requires a
 local desktop session; when called from a notebook, it enables Qt event-loop
 integration automatically.
 

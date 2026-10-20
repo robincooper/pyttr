@@ -173,8 +173,8 @@ def show_latex(obj):
         raise RuntimeError('IPython is required for show_latex()')
     return Latex(to_ipython_latex(obj))
 
-def show_interactive(obj, backend='inline'):
-    """Display an expandable record inline or in a separate window."""
+def show_interactive(obj, backend=None):
+    """Display LaTeX inline in a notebook or in a separate window."""
     from .interactive_display import show_interactive as display_record
     return display_record(obj, backend=backend)
         

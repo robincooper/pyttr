@@ -1,6 +1,7 @@
-"""Interactive HTML display of records and record types."""
+"""Interactive HTML display of objects with LaTeX representations."""
 
 from html import escape
+from inspect import signature
 
 from .core.records import Rec
 from .core.record_types import RecTypeStructure
@@ -45,7 +46,16 @@ document.addEventListener('click', function (event) {
 
 
 def _math(obj, *, anglebrackets=False):
-    latex = to_latex(obj, anglebrackets=anglebrackets)
+    method = getattr(obj, 'to_latex', None)
+    if callable(method):
+        try:
+            signature(method).bind([])
+        except TypeError:
+            latex = method()
+        else:
+            latex = to_latex(obj, anglebrackets=anglebrackets)
+    else:
+        latex = to_latex(obj, anglebrackets=anglebrackets)
     return '<span class="pyttr-math">\\(' + escape(latex) + '\\)</span>'
 
 
@@ -82,10 +92,13 @@ def _record_html(obj, ancestors):
 
 
 def render_interactive_html(obj):
-    """Return an HTML document for an interactive record."""
-    if not isinstance(obj, (Rec, RecTypeStructure)):
-        raise TypeError('Interactive display requires a Rec or RecType object')
-    content = _record_html(obj, set())
+    """Return HTML for a record or any object with ``to_latex``."""
+    if isinstance(obj, (Rec, RecTypeStructure)):
+        content = _record_html(obj, set())
+    elif callable(getattr(obj, 'to_latex', None)):
+        content = _math(obj)
+    else:
+        raise TypeError('Interactive display requires a record or an object with to_latex()')
     return (
         '<!doctype html><html><head><meta charset="utf-8">'
         + _STYLE + '</head><body><div class="pyttr-display">'
@@ -95,14 +108,22 @@ def render_interactive_html(obj):
     )
 
 
-def show_interactive(obj, backend='inline'):
-    """Show an expandable record inline in a notebook or in a Qt window.
-
-    ``backend`` is ``'inline'`` or ``'window'``. The window backend requires
-    PySide6. MathJax is loaded from a CDN by both backends.
-    """
+def _resolve_backend(backend):
+    if backend is None:
+        return 'inline' if _in_notebook() else 'window'
     if backend not in ('inline', 'window'):
         raise ValueError("backend must be 'inline' or 'window'")
+    return backend
+
+
+def show_interactive(obj, backend=None):
+    """Show LaTeX inline in a notebook or in a Qt window.
+
+    The default backend is ``'inline'`` in notebooks and ``'window'`` elsewhere.
+    Records have clickable nested fields. The window backend requires PySide6.
+    MathJax is loaded from a CDN by both backends.
+    """
+    backend = _resolve_backend(backend)
     document = render_interactive_html(obj)
     if backend == 'inline':
         try:

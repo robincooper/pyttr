@@ -153,9 +153,16 @@ class KPlusStringType(TypeClass):
 
             return MeetType(self,T)
 
+class KStarStringType(KPlusStringType):
+    def __init__(self,strT):
+        super().__init__(strT)
+        self.witness_conditions = \
+          [lambda s: isinstance(s,TTRString) and (s.items==[] or s.startswith_recursive(self.comps.base_type))]
+
 
 __all__ = [
     "TTRString",
     "TTRStringType",
     "KPlusStringType",
+    "KStarStringType",
 ]

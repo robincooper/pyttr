@@ -201,3 +201,8 @@ dictionaries containing records.
 
 The verification suite covers both semantic APIs, compatibility imports,
 structural operations, examples, and notebook execution.
+
+
+## Modification history
+
+20261021 Added KStarStringType

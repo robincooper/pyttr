@@ -30,6 +30,8 @@ class TTRString(object):
     def show(self):
         return '"'+' '.join([show(i) for i in self.items])+'"'
     def to_latex(self,vars):
+        if not self.items:
+            return '\\varepsilon'
         return '\\ '.join([to_latex(i,vars) for i in self.items])
 
 class TTRStringType(TypeClass):

@@ -17,3 +17,4 @@ build/
 src/pyttr/grammars/ures/.\#abs.py
 *.~2~
 
+notebooks/scratch.ipynb

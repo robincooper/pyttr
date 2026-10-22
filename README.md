@@ -32,9 +32,9 @@ show_interactive(record_type)                       # inline in a notebook; wind
 show_interactive(record_type, backend="window")     # choose a window explicitly
 ```
 
-Both views let you expand and collapse nested records with a click. Any object
-with a `to_latex()` method can also be displayed; other object types appear as
-a single rendered expression. LaTeX typesetting loads MathJax from the
+Both views let you expand and collapse nested records with a click, including
+record types inside compound types. Any object with a `to_latex()` method can
+also be displayed. LaTeX typesetting loads MathJax from the
 internet. The window backend requires a
 local desktop session; when called from a notebook, it enables Qt event-loop
 integration automatically.

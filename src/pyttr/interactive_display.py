@@ -2,6 +2,8 @@
 
 from html import escape
 from inspect import signature
+from itertools import count
+import json
 
 from .core.records import Rec
 from .core.record_types import RecTypeStructure
@@ -26,6 +28,8 @@ _STYLE = """
   .pyttr-record[data-collapsed="true"] > .pyttr-fields,
   .pyttr-record[data-collapsed="true"] > .pyttr-bracket { display: none; }
   .pyttr-record[data-collapsed="false"] > .pyttr-ellipsis { display: none; }
+  [id^="pyttr-record-"] { cursor: pointer; }
+  [id^="pyttr-record-"]:hover { opacity: .7; }
 </style>
 """
 
@@ -45,7 +49,7 @@ document.addEventListener('click', function (event) {
 """
 
 
-def _math(obj, *, anglebrackets=False):
+def _latex(obj, *, anglebrackets=False):
     method = getattr(obj, 'to_latex', None)
     if callable(method):
         try:
@@ -56,7 +60,99 @@ def _math(obj, *, anglebrackets=False):
             latex = to_latex(obj, anglebrackets=anglebrackets)
     else:
         latex = to_latex(obj, anglebrackets=anglebrackets)
-    return '<span class="pyttr-math">\\(' + escape(latex) + '\\)</span>'
+    return latex
+
+
+def _math(obj, *, anglebrackets=False):
+    return '<span class="pyttr-math">\\(' + escape(_latex(obj, anglebrackets=anglebrackets)) + '\\)</span>'
+
+
+def _all_records(obj):
+    """Find record values in the part of an object used by LaTeX renderers."""
+    records = []
+    seen = set()
+
+    def visit(value):
+        if id(value) in seen or isinstance(value, (str, bytes, int, float, bool, type(None))):
+            return
+        seen.add(id(value))
+        if isinstance(value, RecTypeStructure):
+            records.append(value)
+            children = value.comps.values()
+        elif isinstance(value, Rec):
+            records.append(value)
+            children = value.fields.values()
+        elif isinstance(value, dict):
+            children = value.values()
+        elif isinstance(value, (list, tuple)):
+            children = value
+        else:
+            try:
+                attrs = vars(value)
+            except TypeError:
+                return
+            ignored = {
+                'poss', 'model', 'witness_cache', 'supertype_cache',
+                'witness_conditions', 'witness_types', 'witness_funs',
+            }
+            children = (child for name, child in attrs.items() if name not in ignored)
+        for child in children:
+            visit(child)
+
+    visit(obj)
+    return records
+
+
+def _make_template(latex, candidates, definitions, numbers):
+    for record in sorted(candidates, key=lambda r: len(_latex(r)), reverse=True):
+        source = _latex(record)
+        if not source:
+            continue
+        while source in latex:
+            number = str(next(numbers))
+            nested = [child for child in _all_records(record) if child is not record]
+            definitions[number] = _make_template(source, nested, definitions, numbers)
+            latex = latex.replace(source, '\x01' + number + '\x02', 1)
+    return latex
+
+
+_COMPOUND_SCRIPT = r"""
+<script>
+(() => {
+  const data = __STATE__;
+  const math = document.getElementById('pyttr-compound-math');
+  const collapsed = new Set();
+  const expand = template => template.replace(/\u0001(\d+)\u0002/g, (_, id) => {
+    const body = collapsed.has(id) ? '\\left[\\cdots\\right]' : expand(data.records[id]);
+    return '\\cssId{pyttr-record-' + id + '}{' + body + '}';
+  });
+  const source = () => '\\(' + expand(data.root) + '\\)';
+  math.textContent = source();
+  document.addEventListener('click', event => {
+    const target = event.target.closest('[id^="pyttr-record-"]');
+    if (!target || !math.contains(target)) return;
+    const id = target.id.slice('pyttr-record-'.length);
+    if (collapsed.has(id)) collapsed.delete(id);
+    else collapsed.add(id);
+    MathJax.typesetClear([math]);
+    math.textContent = source();
+    MathJax.typesetPromise([math]);
+  });
+})();
+</script>
+"""
+
+
+def _compound_html(obj):
+    definitions = {}
+    template = _make_template(_latex(obj), _all_records(obj), definitions, count())
+    if not definitions:
+        return _math(obj)
+    state = json.dumps({'root': template, 'records': definitions}).replace('<', r'\u003c')
+    return (
+        '<span class="pyttr-math" id="pyttr-compound-math"></span>'
+        + _COMPOUND_SCRIPT.replace('__STATE__', state)
+    )
 
 
 def _record_html(obj, ancestors):
@@ -96,13 +192,15 @@ def render_interactive_html(obj):
     if isinstance(obj, (Rec, RecTypeStructure)):
         content = _record_html(obj, set())
     elif callable(getattr(obj, 'to_latex', None)):
-        content = _math(obj)
+        content = _compound_html(obj)
     else:
         raise TypeError('Interactive display requires a record or an object with to_latex()')
     return (
         '<!doctype html><html><head><meta charset="utf-8">'
         + _STYLE + '</head><body><div class="pyttr-display">'
         + content + '</div>' + _SCRIPT
+        + '<script>window.MathJax = {loader: {load: ["[tex]/html"]}, '
+          'tex: {packages: {"[+]": ["html"]}}};</script>'
         + '<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>'
         + '</body></html>'
     )
@@ -120,7 +218,8 @@ def show_interactive(obj, backend=None):
     """Show LaTeX inline in a notebook or in a Qt window.
 
     The default backend is ``'inline'`` in notebooks and ``'window'`` elsewhere.
-    Records have clickable nested fields. The window backend requires PySide6.
+    Records, including those inside compound objects, can be collapsed by click.
+    The window backend requires PySide6.
     MathJax is loaded from a CDN by both backends.
     """
     backend = _resolve_backend(backend)

@@ -1,8 +1,11 @@
 import unittest
+import json
+import re
 from unittest.mock import patch
 
 from pyttr.core.records import Rec
 from pyttr.categorical.record_types import RecType
+from pyttr.categorical.compound_types import MeetType, FunType, ListType
 from pyttr.categorical.type_core import BType
 from pyttr.interactive_display import (
     _resolve_backend, render_interactive_html, show_interactive,
@@ -43,6 +46,36 @@ class InteractiveDisplayTests(unittest.TestCase):
 
         self.assertIn(r'\(\alpha + \beta\)', render_interactive_html(WithVars()))
         self.assertIn(r'\(\gamma\)', render_interactive_html(WithoutVars()))
+
+    def test_record_type_inside_compound_types_is_collapsible(self):
+        nested = RecType({'person': {'name': BType('Ind')}})
+        for compound in (
+            MeetType(nested, BType('Ind')),
+            FunType(BType('Ind'), nested),
+            ListType(nested),
+        ):
+            with self.subTest(type=type(compound).__name__):
+                html = render_interactive_html(compound)
+                self.assertIn('id="pyttr-compound-math"', html)
+                self.assertIn(r'\cssId{pyttr-record-', html)
+                state = json.loads(re.search(r'const data = (\{.*?\});', html).group(1))
+                self.assertEqual(len(state['records']), 2)
+                self.assertIn('\x010\x02', state['root'])
+                self.assertIn('\x011\x02', state['records']['0'])
+
+    def test_custom_latex_wrapper_can_contain_a_collapsible_record(self):
+        class Wrapper:
+            def __init__(self, child):
+                self.child = child
+
+            def to_latex(self, vars):
+                from pyttr.utils import to_latex
+                return r'\boxed{' + to_latex(self.child, vars) + '}'
+
+        html = render_interactive_html(Wrapper(RecType({'x': BType('Ind')})))
+        self.assertIn('id="pyttr-compound-math"', html)
+        state = json.loads(re.search(r'const data = (\{.*?\});', html).group(1))
+        self.assertEqual(len(state['records']), 1)
 
     def test_default_backend_tracks_notebook_environment(self):
         with patch('pyttr.interactive_display._in_notebook', return_value=True):

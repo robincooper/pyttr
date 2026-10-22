@@ -158,6 +158,11 @@ class KStarStringType(KPlusStringType):
         super().__init__(strT)
         self.witness_conditions = \
           [lambda s: isinstance(s,TTRString) and (s.items==[] or s.startswith_recursive(self.comps.base_type))]
+    def to_latex(self,vars):
+        if isinstance(self.comps.base_type, TTRStringType) and len(self.comps.base_type.comps.types)>1:
+            return '('+to_latex(self.comps.base_type)+')^*'
+        else:
+            return to_latex(self.comps.base_type)+'^*'
 
 
 __all__ = [

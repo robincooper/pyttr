@@ -48,6 +48,38 @@ document.addEventListener('click', function (event) {
 </script>
 """
 
+_RESIZE_SCRIPT = """
+<script>
+(() => {
+  if (window.parent === window) return;
+  const content = document.querySelector('.pyttr-display');
+  const reportHeight = () => window.parent.postMessage({
+    kind: 'pyttr-interactive-height',
+    height: Math.ceil(content.getBoundingClientRect().height) + 2
+  }, '*');
+  new ResizeObserver(reportHeight).observe(content);
+  window.addEventListener('load', reportHeight);
+  window.addEventListener('message', event => {
+    if (event.source === window.parent && event.data?.kind === 'pyttr-measure') {
+      reportHeight();
+    }
+  });
+})();
+</script>
+"""
+
+_INLINE_ONLOAD = """((frame) => {
+  window.addEventListener('message', event => {
+    if (event.source !== frame.contentWindow ||
+        event.data?.kind !== 'pyttr-interactive-height') return;
+    const height = Number(event.data.height);
+    if (Number.isFinite(height) && height > 0) {
+      frame.style.height = Math.ceil(height) + 'px';
+    }
+  });
+  frame.contentWindow.postMessage({kind: 'pyttr-measure'}, '*');
+})(this)"""
+
 
 def _latex(obj, *, anglebrackets=False):
     method = getattr(obj, 'to_latex', None)
@@ -198,7 +230,7 @@ def render_interactive_html(obj):
     return (
         '<!doctype html><html><head><meta charset="utf-8">'
         + _STYLE + '</head><body><div class="pyttr-display">'
-        + content + '</div>' + _SCRIPT
+        + content + '</div>' + _SCRIPT + _RESIZE_SCRIPT
         + '<script>window.MathJax = {loader: {load: ["[tex]/html"]}, '
           'tex: {packages: {"[+]": ["html"]}}};</script>'
         + '<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>'
@@ -230,10 +262,13 @@ def show_interactive(obj, backend=None):
         except ImportError as exc:
             raise RuntimeError('Inline display requires IPython') from exc
         # srcdoc keeps this view's script and styles independent of the notebook.
+        # The sandboxed frame reports its height to this element after rendering
+        # and whenever expanding a record changes the content size.
         frame = (
             '<iframe title="Interactive record" '
-            'style="width:100%;height:360px;border:0" '
-            'sandbox="allow-scripts" srcdoc="'
+            'style="width:100%;height:80px;border:0" '
+            'sandbox="allow-scripts" onload="'
+            + escape(_INLINE_ONLOAD, quote=True) + '" srcdoc="'
             + escape(document, quote=True) + '"></iframe>'
         )
         return display({'text/html': frame}, raw=True)

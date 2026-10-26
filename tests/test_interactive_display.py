@@ -91,6 +91,15 @@ class InteractiveDisplayTests(unittest.TestCase):
         output = display.call_args.args[0]['text/html']
         self.assertIn('srcdoc=', output)
         self.assertIn('Interactive record', output)
+        self.assertIn('height:80px', output)
+        self.assertIn('pyttr-interactive-height', output)
+        self.assertIn('pyttr-measure', output)
+        self.assertNotIn('height:360px', output)
+
+    def test_inline_document_reports_height_changes(self):
+        html = render_interactive_html(Rec({'person': Rec({'name': 'Ada'})}))
+        self.assertIn('new ResizeObserver(reportHeight).observe(content)', html)
+        self.assertIn("window.addEventListener('load', reportHeight)", html)
 
 
 if __name__ == '__main__':

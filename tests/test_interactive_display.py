@@ -1,8 +1,11 @@
 import unittest
 import json
 import re
+from types import SimpleNamespace
 from unittest.mock import patch
 
+from pyttr.core.model import Possibility
+from pyttr.probabilistic.terms import Possibility as ProbPossibility
 from pyttr.core.records import Rec
 from pyttr.categorical.record_types import RecType
 from pyttr.categorical.compound_types import MeetType, FunType, ListType
@@ -100,6 +103,42 @@ class InteractiveDisplayTests(unittest.TestCase):
         html = render_interactive_html(Rec({'person': Rec({'name': 'Ada'})}))
         self.assertIn('new ResizeObserver(reportHeight).observe(content)', html)
         self.assertIn("window.addEventListener('load', reportHeight)", html)
+
+    def test_possibility_latex_matches_visible_show_entries(self):
+        model = Possibility('M1', {
+            'Ind': SimpleNamespace(witness_cache=['a', 'b']),
+            'Ty': SimpleNamespace(witness_cache=['hidden']),
+        })
+        latex = model.to_latex()
+        self.assertIn(r'\begin{array}{lcl}', latex)
+        self.assertIn(r'\hline', latex)
+        self.assertIn(r'\text{M}_{\text{1}}: & &', latex)
+        self.assertIn(r'\text{Ind} & : & [ \text{a}, \text{b}]', latex)
+        self.assertNotIn('hidden', latex)
+        self.assertNotIn('Ty', latex)
+        self.assertNotIn(r'\multicolumn', latex)
+        self.assertIn(' & & ', Possibility('Empty').to_latex())
+        self.assertIn(r'\text{\_Model\_}', Possibility('_Model_').to_latex())
+
+    def test_possibility_is_interactive_and_record_witnesses_collapse(self):
+        model = Possibility('M', {
+            'R': SimpleNamespace(witness_cache=[Rec({'x': 'a'})]),
+        })
+        html = render_interactive_html(model)
+        self.assertIn('id="pyttr-compound-math"', html)
+        self.assertIn(r'\cssId{pyttr-record-', html)
+        self.assertNotIn(r'\multicolumn', html)
+        with patch('IPython.display.display') as display:
+            show_interactive(model, backend='inline')
+        self.assertIn('srcdoc=', display.call_args.args[0]['text/html'])
+
+    def test_probabilistic_possibility_uses_paired_witnesses(self):
+        model = ProbPossibility('P', {
+            'Ind': SimpleNamespace(witness_cache=(['a'], ['certain'])),
+        })
+        latex = model.to_latex()
+        self.assertIn(r'\langle \text{a}, \text{certain}\rangle', latex)
+        self.assertIn('pyttr-display', render_interactive_html(model))
 
 
 if __name__ == '__main__':

@@ -7,6 +7,7 @@ import json
 
 from .core.records import Rec
 from .core.record_types import RecTypeStructure
+from .core.model import Possibility
 from .utils import to_latex
 
 
@@ -114,6 +115,10 @@ def _all_records(obj):
         elif isinstance(value, Rec):
             records.append(value)
             children = value.fields.values()
+        elif isinstance(value, Possibility):
+            children = (
+                witnesses for _, witnesses in value._latex_entries()
+            )
         elif isinstance(value, dict):
             children = value.values()
         elif isinstance(value, (list, tuple)):

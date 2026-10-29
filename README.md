@@ -2,8 +2,8 @@
 
 This is the 2.x release line of the Python implementation of Type Theory with
 Records (TTR). The original implementation is maintained on the
-[`1.x` branch](https://github.com/robincooper/pyttr/tree/1.x). Install a release
-line with `python -m pip install "pyttr>=2,<3"` or
+[`1.x` branch](https://github.com/robincooper/pyttr/tree/1.x). After both release
+lines are published on PyPI, install one with `python -m pip install "pyttr>=2,<3"` or
 `python -m pip install "pyttr>=1,<2"`. Only one release line can be installed
 in a Python environment at a time.
 

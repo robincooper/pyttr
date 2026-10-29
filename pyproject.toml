@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyttr"
+version = "1.0.0"
+description = "The original Python implementation of Type Theory with Records"
+readme = {file = "README", content-type = "text/plain"}
+requires-python = ">=3.11"
+dependencies = [
+  "ipython",
+  "numpy",
+  "tabulate",
+]
+
+[project.optional-dependencies]
+notebooks = ["ipykernel", "jupyterlab"]
+
+[project.urls]
+Repository = "https://github.com/robincooper/pyttr"
+
+[tool.setuptools]
+py-modules = ["config", "records", "utils", "ttrtypes", "probttrtypes", "neurons", "nu"]

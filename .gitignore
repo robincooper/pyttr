@@ -18,3 +18,15 @@ src/pyttr/grammars/ures/.\#abs.py
 *.~2~
 
 notebooks/scratch.ipynb
+
+# Files left by the original implementation and its documentation builds.
+\#*
+auto/
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+ronja_looking_for_dogs.ipynb
+ttr-overview.tex

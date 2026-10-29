@@ -1,0 +1,59 @@
+import sys
+import unittest
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+SRC = ROOT / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
+
+from pyttr import ttrtypes as ttr
+from pyttr.utils import nottrace, ttrace, ttracing_list
+
+
+class TypeTests(unittest.TestCase):
+    def setUp(self):
+        ttr.initmodel()
+        nottrace()
+
+    def tearDown(self):
+        nottrace()
+
+    def test_basic_type_judgement_and_query(self):
+        ind = ttr.BType("Ind")
+
+        self.assertTrue(ind.judge("j"))
+        self.assertTrue(ind.query("j"))
+        self.assertFalse(ind.query("missing"))
+
+    def test_meet_type_queries_both_components(self):
+        t1 = ttr.Type("T1")
+        t2 = ttr.Type("T2")
+        t1.judge("a")
+        t2.judge("a")
+        t1.judge("b")
+
+        meet = ttr.MeetType(t1, t2)
+
+        self.assertTrue(meet.query("a"))
+        self.assertFalse(meet.query("b"))
+
+    def test_checked_function_application_checks_domain(self):
+        ind = ttr.BType("Ind")
+        ind.judge("j")
+        fun = ttr.Fun("x", ind, "x")
+
+        self.assertEqual(fun.appc("j"), "j")
+        self.assertIsNone(fun.appc("not_an_ind"))
+
+    def test_tracing_can_disable_single_channel(self):
+        self.assertIn("pathvalue", ttrace("pathvalue"))
+
+        nottrace("pathvalue")
+
+        self.assertNotIn("pathvalue", ttracing_list)
+
+
+if __name__ == "__main__":
+    unittest.main()

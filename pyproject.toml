@@ -1,24 +1,48 @@
 [build-system]
-requires = ["setuptools>=77", "wheel"]
+requires = ["setuptools >= 77.0.3"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyttr"
-version = "1.0.0"
-description = "The original Python implementation of Type Theory with Records"
-readme = {file = "README", content-type = "text/plain"}
+version = "2.0.0"
+description = "A cleaned-up Python implementation of Type Theory with Records."
+readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
   "ipython",
   "numpy",
-  "tabulate",
 ]
-
-[project.optional-dependencies]
-notebooks = ["ipykernel", "jupyterlab"]
 
 [project.urls]
 Repository = "https://github.com/robincooper/pyttr"
 
+[project.optional-dependencies]
+display = [
+  "PySide6",
+]
+dev = [
+  "ipykernel",
+  "nbclient",
+  "nbformat",
+  "pytest",
+  "torch>=2.0",
+  "torch-hd>=5.8",
+]
+notebooks = [
+  "jupyterlab",
+]
+spa = [
+  "torch>=2.0",
+  "torch-hd>=5.8",
+]
+
 [tool.setuptools]
-py-modules = ["config", "records", "utils", "ttrtypes", "probttrtypes", "neurons", "nu"]
+package-dir = {"" = "src"}
+py-modules = ["config", "records", "ttrtypes", "probttrtypes", "utils"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "."]
+testpaths = ["tests"]
